@@ -1,11 +1,20 @@
-:root{color-scheme:light dark;--bg:#fff;--fg:#111;--muted:#6b6b6b;--rule:#e5e5e5;--link:#1f6feb}
-@media (prefers-color-scheme:dark){:root{--bg:#000;--fg:#f2f2f2;--muted:#9a9a9a;--rule:#262626;--link:#6ea8fe}}
-html{background:var(--bg);color:var(--fg);font:17px/1.6 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;-webkit-text-size-adjust:100%}
-body{margin:0;padding:0 16px}
-main{max-width:680px;margin:0 auto;padding:48px 0 80px}
-h1{font-size:28px;line-height:1.2;margin:0 0 24px;letter-spacing:-.01em}
-h2{font-size:20px;margin:40px 0 12px}
-p{margin:0 0 16px}
-a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}
-nav{font-size:14px;color:var(--muted);margin-bottom:32px}nav a{color:var(--muted)}
-footer{margin-top:64px;padding-top:16px;border-top:1px solid var(--rule);font-size:14px;color:var(--muted)}
+/* Shared styles for Known's text pages (privacy policy, support). The landing page carries its own. */
+:root{color-scheme:dark;--bg:#000;--fg:#f4f4f4;--body:#c9c9cc;--muted:#8d8d92;--rule:#1c1c1f}
+*{box-sizing:border-box}
+html{background:var(--bg);color:var(--fg);font:17px/1.6 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;-webkit-text-size-adjust:100%;-webkit-font-smoothing:antialiased}
+body{margin:0;padding:0 max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
+main{max-width:680px;margin:0 auto;padding:0 0 80px}
+nav{display:flex;align-items:center;justify-content:space-between;height:76px;margin-bottom:48px;font-size:15px}
+nav .wordmark{line-height:0}
+nav .wordmark img{height:22px;width:auto;display:block}
+nav .links{display:flex;gap:24px}
+nav a{color:var(--muted);text-decoration:none}nav a:hover{color:var(--fg)}
+h1{font-size:34px;line-height:1.15;margin:0 0 28px;letter-spacing:-.03em;font-weight:600;text-wrap:balance}
+h2{font-size:21px;margin:44px 0 12px;letter-spacing:-.015em;font-weight:600}
+p{margin:0 0 16px;color:var(--body)}
+strong{color:var(--fg);font-weight:600}
+a{color:var(--fg);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--muted)}
+a:hover{text-decoration-color:var(--fg)}
+footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--rule);font-size:14px;color:var(--muted);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+footer a{color:var(--muted);text-decoration:none}footer a:hover{color:var(--fg)}
+:focus-visible{outline:2px solid var(--fg);outline-offset:3px;border-radius:4px}
