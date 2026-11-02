@@ -2,8 +2,8 @@ Known – press kit
 https://tryknown.app · hello@tryknown.app
 
 Known is a food diary for iPhone. Every number says where it comes from:
-the label (blue), a product database still to confirm (yellow), or an
-estimate by the most advanced AI models (grey ring).
+the label (full blue dot), a product database still to confirm (half blue
+dot), or an estimate by the most advanced AI models (grey ring).
 
 Files
 - known-wordmark-black.svg / .png, known-wordmark-white.svg / .png: the wordmark, always lowercase. Do not retype it in another font.

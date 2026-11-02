@@ -41,13 +41,13 @@ nav.top .links a:hover{color:var(--fg)}
 
 /* hero */
 .hero{text-align:center;padding:84px 0 0;position:relative}
-.hero .wordmark{font-size:38px;display:flex;justify-content:center;margin-bottom:30px}
+
 .hero h1{font-size:clamp(44px,6.8vw,84px);line-height:1;letter-spacing:-.04em;font-weight:600;margin:0 0 22px;text-wrap:balance}
 .hero p{font-size:21px;color:var(--muted);margin:0 0 36px}
 .glow{position:absolute;left:50%;top:420px;width:1100px;height:600px;transform:translateX(-50%);background:radial-gradient(closest-side,rgba(255,255,255,.13),transparent 70%);pointer-events:none}
-.phones{position:relative;display:flex;justify-content:center;align-items:flex-start;gap:40px;margin-top:80px;height:640px;overflow:hidden;-webkit-mask:linear-gradient(#000 72%,transparent);mask:linear-gradient(#000 72%,transparent)}
+.phones{position:relative;display:flex;justify-content:center;align-items:flex-start;gap:40px;margin-top:80px;height:720px;overflow:hidden;-webkit-mask:linear-gradient(#000 88%,transparent);mask:linear-gradient(#000 88%,transparent)}
 .phones .device:nth-child(2){width:340px}
-.phones .device:nth-child(1),.phones .device:nth-child(3){width:300px;margin-top:72px}
+.phones .device:nth-child(1),.phones .device:nth-child(3){width:300px;margin-top:40px}
 
 /* device frame: titanium edge, black inner bezel, screen, Dynamic Island, side buttons */
 .device{position:relative;width:300px;aspect-ratio:1320/2868;flex:none;filter:drop-shadow(0 40px 60px rgba(0,0,0,.6))}
@@ -72,7 +72,7 @@ section{padding:150px 0 0}
 .mark .row .k{font-weight:500;display:inline-flex;align-items:center;gap:10px;font-variant-numeric:tabular-nums}
 .mark .row .k small{color:var(--muted);font-size:14px;margin-left:-5px;font-weight:400}
 .mark .legend{display:flex;gap:14px;align-items:flex-start;padding-left:6px}
-.mark .legend .dot{width:14px;height:14px;margin-top:7px;flex:none}
+.mark .legend .dot{width:16px;height:16px;margin-top:8px;flex:none}
 .mark .legend b{display:block;font-size:22px;font-weight:600;letter-spacing:-.02em;margin-bottom:2px}
 .mark .legend p{margin:0;color:var(--muted);font-size:17px;max-width:520px}
 .mark:nth-child(2){transform:translateX(min(12vw,110px))}
@@ -109,6 +109,7 @@ section{padding:150px 0 0}
 .faq summary::-webkit-details-marker{display:none}
 .faq summary::after{content:"+";color:var(--muted);font-weight:300;font-size:24px;line-height:1}
 .faq details[open] summary::after{content:"–"}
+.faq details.closing summary::after{content:"+"}
 .faq p{color:var(--muted);margin:12px 0 0;max-width:640px}
 .faq a{text-decoration:underline;text-underline-offset:3px}
 
@@ -125,8 +126,8 @@ footer a:hover{color:var(--fg)}
 @media(max-width:860px){
  .wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
  nav.top .links{display:none}
- .hero{padding-top:56px}.hero .wordmark{font-size:30px}
- .phones{gap:18px;height:520px;margin-top:56px}
+ .hero{padding-top:56px}
+ .phones{gap:18px;height:520px;margin-top:56px;-webkit-mask:linear-gradient(#000 72%,transparent);mask:linear-gradient(#000 72%,transparent)}
  .phones .device:nth-child(2){width:250px}.phones .device:nth-child(1),.phones .device:nth-child(3){width:210px;margin-top:56px}
  .phones .device:nth-child(3){display:none}
  section{padding-top:110px}
@@ -140,7 +141,6 @@ footer a:hover{color:var(--fg)}
 <nav class="top wrap"><a class="wordmark" href="#" aria-label="Known, home"><img src="../assets/wordmark-white.svg" alt="known"></a><div class="links"><a href="#marks">Three marks</a><a href="#ways">Ways in</a><a href="#together">Together</a><a href="#questions">Questions</a></div></nav>
 
 <header class="hero wrap">
- <span class="wordmark"><img src="../assets/wordmark-white.svg" alt="known"></span>
  <h1>The food diary<br>you can trust.</h1>
  <p>Every number says where it comes from.</p>
  <a class="badge" href="#" aria-label="Download on the App Store"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.37 12.62c.02 2.33 2.05 3.1 2.07 3.11-.02.06-.32 1.1-1.06 2.19-.64.93-1.3 1.86-2.35 1.88-1.03.02-1.36-.61-2.54-.61s-1.55.59-2.52.63c-1.01.04-1.78-1.01-2.43-1.94C6.21 15.98 5.2 12.49 6.57 10.1c.68-1.19 1.9-1.94 3.22-1.96 1-.02 1.94.67 2.55.67.61 0 1.76-.83 2.96-.71.5.02 1.92.2 2.83 1.53-.07.05-1.69.99-1.67 2.95M14.52 6.84c.54-.65.9-1.56.8-2.46-.78.03-1.72.52-2.27 1.17-.5.58-.93 1.5-.82 2.39.87.07 1.75-.44 2.29-1.1"/></svg><span><small>Download on the</small><b>App Store</b></span></a>
@@ -148,7 +148,7 @@ footer a:hover{color:var(--fg)}
  <div class="phones">
   <div class="device"><div class="btn l1"></div><div class="btn l2"></div><div class="btn l3"></div><div class="btn r"></div><div class="edge"><div class="bezel"><div class="screen"><img src="../assets/voice-dark-hd.jpg" alt="Voice mode: two eggs and a slice of wholegrain toast, written as you say it"><div class="island"></div></div></div></div></div>
   <div class="device"><div class="btn l1"></div><div class="btn l2"></div><div class="btn l3"></div><div class="btn r"></div><div class="edge"><div class="bezel"><div class="screen"><img src="../assets/today-dark-hd.jpg" alt="Today in Known: 1,472 of 2,520 kcal, with breakfast, lunch and snack rows"><div class="island"></div></div></div></div></div>
-  <div class="device"><div class="btn l1"></div><div class="btn l2"></div><div class="btn l3"></div><div class="btn r"></div><div class="edge"><div class="bezel"><div class="screen"><img src="../assets/stats-dark-hd.jpg" alt="Weekly stats with protein leading"><div class="island"></div></div></div></div></div>
+  <div class="device"><div class="btn l1"></div><div class="btn l2"></div><div class="btn l3"></div><div class="btn r"></div><div class="edge"><div class="bezel"><div class="screen"><img src="../assets/scan-dark-hd.jpg" alt="A photo of a cheeseburger and fries being analysed"><div class="island"></div></div></div></div></div>
  </div>
 </header>
 
@@ -215,5 +215,7 @@ footer a:hover{color:var(--fg)}
 const field=document.querySelector('.field');
 if('IntersectionObserver' in window){new IntersectionObserver((e,o)=>{if(e[0].isIntersecting){field.classList.add('on');o.disconnect()}},{threshold:.4}).observe(field)}else field.classList.add('on');
 </script>
+<script src="../assets/lenis.min.js" defer></script>
+<script src="../assets/site.js" defer></script>
 </body>
 </html>
