@@ -29,6 +29,8 @@ p{position:relative;margin:0;color:var(--muted);font-size:clamp(17px,2vw,21px)}
 footer{padding:28px 0 max(28px,env(safe-area-inset-bottom,0px));color:var(--muted);font-size:14px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 footer a{color:var(--muted);text-decoration:none}footer a:hover{color:var(--fg)}
 footer .links{display:flex;gap:24px}
+.mission{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--muted)}
+.half{width:11px;height:11px;border-radius:50%;flex:none;background:linear-gradient(270deg,#2A8ED1 50%,transparent 50%);box-shadow:inset 0 0 0 1.4px #2A8ED1}
 :focus-visible{outline:2px solid var(--fg);outline-offset:3px;border-radius:4px}
 </style>
 </head>
@@ -38,6 +40,7 @@ footer .links{display:flex;gap:24px}
  <img class="wordmark" src="assets/wordmark-white.svg" alt="known">
  <h1>Known is coming soon.</h1>
  <p>The food diary you can trust. Every number says where it comes from.</p>
+ <p class="mission"><span class="half" aria-hidden="true"></span>Together, we check every food until every dot is full.</p>
 </main>
 <footer><span>© 2026 Filippo Baldi · Made for iPhone</span><span class="links"><a href="privacy-policy/">Privacy policy</a><a href="support/">Support</a></span></footer>
 </body>
