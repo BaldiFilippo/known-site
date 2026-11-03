@@ -27,7 +27,7 @@
       const opening = !d.open || d.classList.contains('closing');
       const from = d.offsetHeight;
       if (anim) anim.cancel();
-      d.open = !opening;
+      d.open = opening;
       const to = d.offsetHeight;
       d.open = true;
       d.classList.toggle('closing', !opening);
