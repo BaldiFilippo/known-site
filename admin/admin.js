@@ -104,11 +104,11 @@ $("email-form").addEventListener("submit", async (e) => {
   setStatus("Sending…");
   try {
     // create_user: false — sign-ups are off; an unknown address gets nothing.
-    await auth("otp", { email, create_user: false });
+    await auth(`otp?redirect_to=${encodeURIComponent(location.origin + location.pathname)}`, { email, create_user: false });
     store.set(EMAIL_KEY, email);
     $("email-form").hidden = true;
     $("code-form").hidden = false;
-    $("code-sent").textContent = `A code is on its way to ${email}.`;
+    $("code-sent").textContent = `An email is on its way to ${email}. Open its link on this device, or type the code if it shows one.`;
     setStatus("");
     $("code").focus();
   } catch (err) {
@@ -443,5 +443,15 @@ function renderCosts(rows, today) {
 function tile(title, value) {
   return el("div", { class: "tile" }, el("p", {}, title), el("strong", {}, value));
 }
+
+// The email's link comes back here with the session in the hash (or an error): kept, then wiped from the address bar.
+(function fromLink() {
+  const hash = new URLSearchParams(location.hash.slice(1));
+  if (!hash.has("access_token") && !hash.has("error")) return;
+  history.replaceState(null, "", location.pathname);
+  if (hash.has("access_token")) keep({ access_token: hash.get("access_token"), refresh_token: hash.get("refresh_token"),
+    expires_at: Number(hash.get("expires_at")) || undefined, expires_in: Number(hash.get("expires_in")) || undefined });
+  else setStatus(hash.get("error_description") ?? "The link didn't work: ask for a new one.", true);
+})();
 
 show();
