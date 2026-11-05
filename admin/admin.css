@@ -37,6 +37,7 @@ input{font:inherit;color:var(--fg);background:var(--card);border:1px solid var(-
 .top nav button[aria-selected=true]{background:var(--card2);color:var(--fg)}
 .top .sp{flex:1}
 @media (max-width:420px){.top{gap:8px}.top nav button{padding:0 10px}.top .link{font-size:14px;padding:0 2px}}
+@media (max-width:520px){.top .wm{display:none}}
 
 /* Sign-in */
 .signin{max-width:440px;margin:0 auto;padding:48px 16px}
@@ -116,6 +117,27 @@ td.d{color:var(--muted);font-size:13px;width:64px}
 .swipe-hint{text-align:center;color:var(--muted);font-size:13px;margin:-4px 0 16px}
 @media (min-width:900px){.mob{display:none}}
 @media (max-width:899px){.desk{display:none}}
+
+/* Catalog (read-only): the inbox layout on a wide screen; on a phone filters in a row, the list, then one product */
+.cdesk{display:grid;grid-template-columns:220px minmax(280px,360px) minmax(0,1fr);height:calc(100vh - 60px)}
+.clist{overflow:auto;flex:1}
+.count{margin:0;padding:10px 16px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--rule)}
+.chips{display:inline-flex;flex-wrap:wrap;gap:6px}
+.pt .chips{margin-bottom:8px}
+.note{margin:18px 0 0;border-radius:14px;padding:12px 14px;background:rgba(42,142,209,.1);box-shadow:inset 0 0 0 1px rgba(42,142,209,.45);font-size:14px;color:var(--body)}
+.back{color:var(--fg);padding:0 6px 0 0;margin-bottom:8px}
+@media (max-width:899px){
+  .cdesk{display:block;height:auto}
+  .cdesk .queues{display:flex;gap:6px;overflow-x:auto;border:0;border-bottom:1px solid var(--rule);padding:10px 16px;scrollbar-width:none}
+  .cdesk .queues::-webkit-scrollbar{display:none}
+  .cdesk .q{width:auto;flex:none;gap:8px;background:var(--card);min-height:38px;border-radius:999px;padding:0 12px}
+  .cdesk .progress{display:none}
+  .cdesk .list{border:0}
+  .cdesk .search{padding:12px 16px}
+  .cdesk .detail{display:none;padding:16px 16px 40px}
+  .cdesk.open .list,.cdesk.open .queues{display:none}
+  .cdesk.open .detail{display:block}
+}
 
 /* Toast */
 .toast{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:9;display:flex;align-items:center;gap:14px;background:var(--fg);color:#000;border-radius:999px;padding:6px 6px 6px 18px;font-weight:600;font-size:15px;box-shadow:0 8px 30px rgba(0,0,0,.5);max-width:calc(100% - 32px)}
