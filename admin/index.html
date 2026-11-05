@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Known – Admin</title>
-<meta name="description" content="Known's private admin: catalog corrections and AI costs.">
+<meta name="description" content="Known's private admin: catalog corrections, the catalog and AI costs.">
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src https://lpajxlwmsgolxajndgdv.supabase.co https://world.openfoodfacts.org; base-uri 'none'; form-action 'none'; object-src 'none'">
@@ -21,6 +21,7 @@
   <img class="wm" src="../assets/wordmark-white.svg" alt="Known" width="76" height="19">
   <nav id="tabs" role="tablist" aria-label="Sections" hidden>
     <button type="button" role="tab" id="tab-corrections" aria-controls="corrections" aria-selected="true">Corrections <span class="badge y" id="tab-count"></span></button>
+    <button type="button" role="tab" id="tab-catalog" aria-controls="catalog" aria-selected="false" tabindex="-1">Catalog</button>
     <button type="button" role="tab" id="tab-costs" aria-controls="costs" aria-selected="false" tabindex="-1">Costs</button>
   </nav>
   <span class="sp"></span>
@@ -56,6 +57,17 @@
     <section class="detail" id="detail" aria-live="polite"></section>
   </div>
   <div class="mob" id="mob"></div>
+</main>
+
+<main id="catalog" role="tabpanel" aria-labelledby="tab-catalog" hidden>
+  <div class="cdesk" id="cdesk">
+    <aside class="queues" id="cat-filters" aria-label="Filters"></aside>
+    <section class="list" aria-label="Products">
+      <div class="search"><input id="cat-search" type="search" placeholder="Search name, brand or EAN" aria-label="Search the catalog"></div>
+      <div id="cat-list" class="clist"></div>
+    </section>
+    <section class="detail" id="cat-detail" aria-live="polite"></section>
+  </div>
 </main>
 
 <main id="costs" class="costs" role="tabpanel" aria-labelledby="tab-costs" hidden>

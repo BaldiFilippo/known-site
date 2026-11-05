@@ -3,6 +3,7 @@
 // lets in only Filippo's account. Text from corrections (names, brands) is always set as text, never as HTML.
 //
 // Corrections: on a wide screen an inbox (queues, list, detail, keyboard); on a phone one at a time, swiped.
+// Catalog: read-only, the products the app bundles with the approved corrections laid over them.
 // Costs: a sentence first, then the worst cases, the days and where the money goes.
 "use strict";
 
@@ -168,13 +169,14 @@ function show() {
   $("tabs").hidden = !signedIn;
   $("signout").hidden = !signedIn;
   $("corrections").hidden = !signedIn || tab !== "corrections";
+  $("catalog").hidden = !signedIn || tab !== "catalog";
   $("costs").hidden = !signedIn || tab !== "costs";
   if (signedIn && !loaded) loadCorrections();
 }
 
-const tabs = [$("tab-corrections"), $("tab-costs")];
+const tabs = [$("tab-corrections"), $("tab-catalog"), $("tab-costs")];
 function selectTab(button) {
-  tab = button.id === "tab-costs" ? "costs" : "corrections";
+  tab = button.id.slice(4);
   for (const t of tabs) {
     const on = t === button;
     t.setAttribute("aria-selected", on);
@@ -182,6 +184,7 @@ function selectTab(button) {
   }
   show();
   if (tab === "costs" && !costsLoaded) loadCosts();
+  if (tab === "catalog" && !catalog) loadCatalog();
 }
 for (const t of tabs) {
   t.addEventListener("click", () => selectTab(t));
@@ -601,6 +604,184 @@ function fling(card, dir, then) {
 }
 
 wide.addEventListener("change", render);
+
+// ---------- Catalog (read-only) ----------
+
+let catalog = null;          // products, sorted by name, each with _key (14-digit GTIN), _hay (lower-case text) and _o
+let catLoading = false;
+let catFilter = "all";
+let catQuery = "";
+let catSelected = null;      // _key
+let catOpen = false;         // phone: the detail is open over the list
+const CAT_LIMIT = 200;
+
+const key14 = (gtin) => String(gtin).padStart(14, "0");
+/** The barcode as printed: EAN-8 or EAN-13 (the catalog keeps 14 digits, zero-filled). */
+const ean = (gtin) => { const g = String(gtin).replace(/^0+/, ""); return g.padStart(g.length <= 8 ? 8 : 13, "0"); };
+const CAT_FILTERS = [
+  { id: "all", title: "All", test: () => true },
+  { id: "verified", title: "Verified", test: (p) => p.state === "verified" },
+  { id: "same_as_off", title: "Matches Open Food Facts", test: (p) => p.state === "same_as_off" },
+  { id: "single_source", title: "One source only", test: (p) => p.state === "single_source" },
+  { id: "to_recheck", title: "To check", test: (p) => p.state === "to_recheck", badge: "y" },
+  { id: "bad", title: "Doesn't add up", test: (p) => !catFacts(p).addsUp, badge: "r" },
+  { id: "corrected", title: "Corrected", test: (p) => Boolean(p._o) },
+];
+const SRC = { producer: "Producer's site", label: "Pack label", store: "Shop's own brand", shop: "A shop's site" };
+
+/** The catalog file (gzip, from a short-lived link) plus the approved corrections, joined by GTIN. */
+async function loadCatalog() {
+  if (catLoading) return;
+  catLoading = true;
+  put($("cat-list"), el("p", { class: "empty" }, "Loading the catalog…"));
+  put($("cat-detail"));
+  try {
+    const { url, overrides } = await api("catalog");
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`The catalog file answered ${res.status}.`);
+    let bytes = new Uint8Array(await res.arrayBuffer());
+    if (bytes[0] === 0x1f && bytes[1] === 0x8b) bytes = new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer());
+    const file = JSON.parse(new TextDecoder().decode(bytes));
+    const byKey = new Map();
+    for (const p of file.products ?? []) byKey.set(key14(p.gtin), { ...p, _key: key14(p.gtin) });
+    for (const o of overrides ?? []) {
+      const k = key14(o.gtin);
+      const p = byKey.get(k);
+      if (p) p._o = o;
+      else if (o.values && o.name && ["kcal", "carbs", "protein", "fat"].every((n) => o.values[n] != null)) {
+        // Not in the bundled file: the app adds it as verified from the correction.
+        byKey.set(k, { gtin: k, name: o.name, brand: o.brand, basis: o.unit ?? "g", state: "verified", _added: true, _key: k, _o: o,
+          v: [o.values.kcal, o.values.carbs, o.values.protein, o.values.fat] });
+      }
+    }
+    catalog = [...byKey.values()].sort((a, b) => a.name.localeCompare(b.name, "it"));
+    for (const p of catalog) p._hay = [p.name, p.brand, p.maker, p.gtin, ean(p.gtin)].filter(Boolean).join(" ").toLowerCase();
+    catalog.version = file.version;
+    renderCatalog();
+  } catch (err) {
+    failed($("cat-list"), err, loadCatalog);
+  } finally {
+    catLoading = false;
+  }
+}
+
+/** The values the app uses (per 100): the catalog's, or the approved correction's when it has values. */
+function catValues(p) {
+  const x = p.x ?? {};
+  const base = { kcal: p.v?.[0], carbs: p.v?.[1], protein: p.v?.[2], fat: p.v?.[3], kj: x.kj, sugars: x.sugars, fibre: x.fiber, sat: x.sat, salt: x.salt, polyols: x.polyols };
+  const o = p._o?.values;
+  return { base, now: o ? { ...base, ...o } : null };
+}
+
+function catFacts(p) {
+  if (p._facts) return p._facts;
+  const { base, now } = catValues(p);
+  const v = now ?? base;
+  const fromMacros = 4 * (v.carbs ?? 0) + 4 * (v.protein ?? 0) + 9 * (v.fat ?? 0) + 2 * (v.fibre ?? 0);
+  const kcal = Number(v.kcal ?? 0);
+  const addsUp = kcal < 20 ? Math.abs(fromMacros - kcal) < 15 : Math.abs(fromMacros - kcal) / kcal <= 0.15;
+  return (p._facts = { addsUp, fromMacros: Math.round(fromMacros), kcal });
+}
+
+function catVisible() {
+  const f = CAT_FILTERS.find((x) => x.id === catFilter);
+  const words = catQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  return catalog.filter((p) => f.test(p) && words.every((w) => p._hay.includes(w)));
+}
+
+function catChips(p) {
+  const state = p.state === "verified" ? el("span", { class: "chip ok" }, STATE.verified)
+    : el("span", { class: `chip ${p.state === "to_recheck" ? "y" : ""}` }, STATE[p.state] ?? p.state);
+  return [p._o && p._o.kind === "confirm" && !p._o.values ? el("span", { class: "chip ok" }, "Verified by a correction") : state,
+    p._o && (p._o.values || p._o.portion) ? el("span", { class: "chip" }, p._added ? "Added by a correction" : "Corrected") : null,
+    catFacts(p).addsUp ? null : el("span", { class: "chip r" }, "Doesn't add up")];
+}
+
+function renderCatalog() {
+  if (!catalog) return;
+  const filters = $("cat-filters");
+  put(filters, ...CAT_FILTERS.map((f) => {
+    const n = catalog.filter(f.test).length;
+    return el("button", { type: "button", class: "q", "aria-current": catFilter === f.id ? "true" : "false",
+      onclick: () => { catFilter = f.id; catSelected = null; catOpen = false; renderCatalog(); } },
+    el("span", {}, f.title), el("span", { class: `badge ${n && f.badge ? f.badge : ""}` }, int(n)));
+  }), el("p", { class: "progress" }, `Catalog of ${catalog.version?.slice(0, 10) ?? "–"}. Read-only: ask Claude for changes.`));
+  renderCatList();
+  renderCatDetail();
+}
+
+function renderCatList() {
+  const rows = catVisible();
+  if (catSelected === null || !rows.some((p) => p._key === catSelected)) catSelected = rows[0]?._key ?? null;
+  $("cdesk").classList.toggle("open", catOpen);
+  if (!rows.length) { put($("cat-list"), el("p", { class: "empty" }, catQuery ? "Nothing matches." : "No products here.")); return; }
+  const shownRows = rows.slice(0, CAT_LIMIT);
+  put($("cat-list"), el("p", { class: "count" }, rows.length > CAT_LIMIT ? `First ${CAT_LIMIT} of ${int(rows.length)}: search to narrow them.` : `${int(rows.length)} products`),
+    ...shownRows.map((p) => el("button", { type: "button", class: "it", "aria-current": p._key === catSelected ? "true" : "false",
+      onclick: () => { catSelected = p._key; catOpen = true; renderCatList(); renderCatDetail(); if (!wide.matches) scrollTo({ top: 0 }); } },
+    el("b", {}, p.name), el("span", { class: "br" }, [p.brand, `EAN ${ean(p.gtin)}`].filter(Boolean).join(" · ")),
+    el("span", { class: "m" }, el("span", { class: "chips" }, catChips(p))))));
+  if (wide.matches) $("cat-list").querySelector("[aria-current=true]")?.scrollIntoView({ block: "nearest" });
+}
+
+function renderCatDetail() {
+  const p = catalog?.find((x) => x._key === catSelected);
+  if (!p) { put($("cat-detail")); return; }
+  const { base, now } = catValues(p);
+  const f = catFacts(p);
+  const unit = p.basis ?? "g", o = p._o;
+  const alt = p.alt ? { kcal: p.alt[0], carbs: p.alt[1], protein: p.alt[2], fat: p.alt[3] } : null;
+  const ROWS = [["Calories", "kcal", "kcal"], ["kJ", "kj", "kcal"], ["Carbs", "carbs", "g"], ["Sugars", "sugars", "g"], ["Polyols", "polyols", "g"],
+    ["Fibre", "fibre", "g"], ["Protein", "protein", "g"], ["Fat", "fat", "g"], ["Saturated fat", "sat", "g"], ["Salt", "salt", "g"]];
+  const lines = ROWS.filter(([, k]) => base[k] != null || now?.[k] != null).map(([title, k, u]) => {
+    const changed = now && !p._added && now[k] != null && base[k] != null && Math.abs(Number(now[k]) - Number(base[k])) > 0.05;
+    return el("tr", { class: changed ? "ch" : "" }, el("th", { scope: "row" }, title),
+      p._added ? null : el("td", {}, shown(base[k], u) ?? "–"),
+      alt ? el("td", {}, shown(alt[k], u) ?? "") : null,
+      now ? el("td", {}, changed ? el("span", {}, shown(now[k], u)) : shown(now[k], u) ?? "–") : null);
+  });
+  const what = !o ? null : o.kind === "confirm" && !o.values
+    ? `Confirmed on ${o.approved ?? "–"}: the pack matches these values, so the app shows it as verified.`
+    : p._added ? `Not in the bundled catalog: added from a correction approved on ${o.approved ?? "–"}.`
+    : o.values ? `Corrected on ${o.approved ?? "–"} (${KIND[o.kind]?.toLowerCase() ?? o.kind}): the app uses the “App now” column.` : `Portion set on ${o.approved ?? "–"}.`;
+  const weight = (n, w = unit) => n ? `${shown(n, w)} ${w}` : null;
+  const facts = [
+    ["State", `${STATE[p.state] ?? p.state}${o?.kind === "confirm" && !o.values && p.state !== "verified" ? ", verified by a correction" : ""}`], ["Read from", SRC[p.src] ?? p.src], ["Read on", p.read], ["Country", p.country ?? (p._added ? null : "IT")],
+    ["Pack", weight(p.qty, p.unit ?? unit)], ["Serving", weight(p.serving)], ["One piece", weight(p.piece)], ["Pieces", p.pieces ? String(p.pieces) : null],
+    o?.portion ? [`One ${o.portion_unit ?? "serving"} (correction)`, weight(o.portion)] : null,
+    ["Maker", p.maker], ["Line", [p.line, p.variant].filter(Boolean).join(" · ") || null], ["Prepared", p.prep === "prepared" ? "Values as prepared" : null],
+    ["Changed in", p.cv?.slice(0, 10)],
+  ].filter((x) => x && x[1]);
+  put($("cat-detail"),
+    wide.matches ? null : el("button", { type: "button", class: "link back", onclick: () => { catOpen = false; renderCatList(); } }, "‹ Products"),
+    el("div", { class: "pt" }, el("span", { class: "chips" }, catChips(p)), el("h2", {}, p.name.replace(/ (\S+)$/, "\u00a0$1")),
+      el("p", {}, [p.brand, `EAN ${ean(p.gtin)}`].filter(Boolean).join(" · "), " · ",
+        el("a", { href: `https://world.openfoodfacts.org/product/${encodeURIComponent(ean(p.gtin))}`, target: "_blank", rel: "noopener noreferrer" }, "Open Food Facts ↗"))),
+    what ? el("p", { class: "note" }, what) : null,
+    f.addsUp ? null : el("p", { class: "warn" }, el("b", {}, "Calories don't add up. "), `Carbs, protein, fat and fibre give ${f.fromMacros} kcal, the values say ${shown(f.kcal, "kcal")}.`),
+    el("div", { class: "cols" },
+      el("div", {}, el("table", {}, el("thead", {}, el("tr", {}, el("th", {}, `Per 100 ${unit}`), p._added ? null : el("th", {}, "Catalog"),
+        alt ? el("th", {}, p.alt_src === "off" ? "Open Food Facts" : p.alt_src === "shop" ? "A shop's site" : "Other source") : null, now ? el("th", {}, "App now") : null)),
+      el("tbody", {}, lines))),
+      el("div", { class: "facts" }, facts.map(([k, v]) => el("div", {}, el("span", {}, k), v)))));
+}
+
+$("cat-search").addEventListener("input", (e) => { catQuery = e.target.value; catSelected = null; if (catalog) { renderCatList(); renderCatDetail(); } });
+wide.addEventListener("change", () => { if (catalog) renderCatalog(); });
+
+document.addEventListener("keydown", (e) => {
+  if (!wide.matches || tab !== "catalog" || !catalog || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.target.closest("input, textarea")) { if (e.key === "Escape") e.target.blur(); return; }
+  const key = e.key.toLowerCase();
+  if (key === "/") { e.preventDefault(); $("cat-search").focus(); return; }
+  const step = key === "j" || e.key === "ArrowDown" ? 1 : key === "k" || e.key === "ArrowUp" ? -1 : 0;
+  if (!step) return;
+  e.preventDefault();
+  const rows = catVisible().slice(0, CAT_LIMIT);
+  const i = rows.findIndex((p) => p._key === catSelected);
+  const next = rows[Math.min(Math.max(i + step, 0), rows.length - 1)];
+  if (next) { catSelected = next._key; renderCatList(); renderCatDetail(); }
+});
 
 // ---------- Costs ----------
 
