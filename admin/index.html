@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Known – Admin</title>
+<meta name="description" content="Known's private admin: catalog corrections and AI costs.">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src https://lpajxlwmsgolxajndgdv.supabase.co https://world.openfoodfacts.org; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Known Admin">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="icon" type="image/png" sizes="64x64" href="../assets/favicon.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<main>
+  <nav>
+    <span class="wordmark"><img src="../assets/wordmark-white.svg" alt="Known" width="88" height="22"></span>
+    <button type="button" class="link" id="signout" hidden>Sign out</button>
+  </nav>
+
+  <section id="signin" hidden aria-labelledby="signin-title">
+    <h1 id="signin-title">Admin</h1>
+    <form id="email-form" novalidate>
+      <label for="email">Email</label>
+      <input id="email" type="email" autocomplete="email" inputmode="email" required>
+      <button type="submit" class="primary">Send code</button>
+    </form>
+    <form id="code-form" novalidate hidden>
+      <p id="code-sent" class="muted"></p>
+      <label for="code">Code</label>
+      <input id="code" type="text" autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]*" maxlength="10" required>
+      <div class="row">
+        <button type="submit" class="primary">Sign in</button>
+        <button type="button" class="ghost" id="other-email">Use another email</button>
+      </div>
+    </form>
+    <p id="signin-status" class="status" role="status" aria-live="polite"></p>
+  </section>
+
+  <section id="app" hidden>
+    <div class="tabs" role="tablist" aria-label="Sections">
+      <button type="button" role="tab" id="tab-corrections" aria-controls="corrections" aria-selected="true">Corrections</button>
+      <button type="button" role="tab" id="tab-costs" aria-controls="costs" aria-selected="false" tabindex="-1">Costs</button>
+    </div>
+
+    <div id="corrections" role="tabpanel" aria-labelledby="tab-corrections">
+      <div class="head">
+        <p id="corr-summary" class="muted" role="status" aria-live="polite"></p>
+        <button type="button" class="ghost small" id="approve-confirms" hidden></button>
+      </div>
+      <div id="corr-list"></div>
+      <details id="decided">
+        <summary>Decided in the last 7 days</summary>
+        <div id="decided-list"></div>
+      </details>
+    </div>
+
+    <div id="costs" role="tabpanel" aria-labelledby="tab-costs" hidden>
+      <div class="head">
+        <div class="seg" role="group" aria-label="Period">
+          <button type="button" data-days="7" aria-pressed="false">7 days</button>
+          <button type="button" data-days="30" aria-pressed="true">30 days</button>
+          <button type="button" data-days="90" aria-pressed="false">90 days</button>
+        </div>
+      </div>
+      <div id="costs-body"></div>
+    </div>
+  </section>
+</main>
+<script src="admin.js"></script>
+</body>
+</html>
