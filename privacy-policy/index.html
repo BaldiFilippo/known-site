@@ -14,7 +14,7 @@
 <main>
 <nav><a class="wordmark" href="../" aria-label="Known, home"><img src="../assets/wordmark-white.svg" alt="known"></a><span class="links"><a href="../privacy-policy/">Privacy policy</a><a href="../support/">Support</a></span></nav>
 <h1 id="known--privacy-policy">Privacy policy</h1>
-<p><strong>Last updated:</strong> 5 November 2026<br><strong>Who is
+<p><strong>Last updated:</strong> 6 November 2026<br><strong>Who is
 responsible:</strong> Filippo Baldi, Italy – <a
 href="mailto:support@tryknown.app">support@tryknown.app</a></p>
 <p>Known is a food diary for iPhone. It has no accounts of its own, no
@@ -52,8 +52,10 @@ when you use voice, today's records (so a spoken change can be applied).
 Anthropic does not use this data to train its models and deletes it
 within 30 days, as its retention policy describes. The requests go
 through our own server, which holds the key to Anthropic and sees the
-same data in passing; it keeps none of it (it logs only how long each
-answer was). Photos of plates and labels are not kept on your iPhone
+same data in passing; it keeps none of it. For each answer it records
+only its kind (a typed line, a photo, voice…), the AI model, its size in
+tokens, what it cost, how long it took and the plan, with nothing that
+tells which installation asked. Photos of plates and labels are not kept on your iPhone
 either: they are deleted once estimated. The app itself doesn't name
 Anthropic; it refers to "an AI provider named in the privacy policy".
 Without this permission, My Foods, barcodes, the catalog and values you
@@ -92,8 +94,20 @@ deleted.</p>
 <p><strong>Our server.</strong> To tell real copies of Known from abuse,
 the app proves with Apple's App Attest that it runs on a genuine iPhone.
 Our server keeps for each installation an anonymous key identifier, a
-counter and how many estimates were made today (there is a daily limit).
-This cannot be linked to you.</p>
+counter, how many estimates were made today and how much the AI has cost
+this month, because each plan has a monthly AI budget. This cannot be
+linked to you.</p>
+<p><strong>Known Pro (Apple).</strong> The subscription is bought and
+paid through Apple: we never see your name, Apple ID or payment details.
+So that the AI works on your installation, the app sends our server
+Apple's signed proof of the subscription. For that installation the
+server keeps the plan (trial or Pro), until when it runs, whether it is
+a real or a test purchase, and a scrambled code made from Apple's
+subscription number (the number itself is never kept), so that every
+installation of the same subscription shares one trial budget. Apple
+also tells our server when a subscription renews, is refunded or ends,
+with that same number, so the plan stays correct. Without Known Pro the
+AI is off and nothing of this is sent.</p>
 <p><strong>IP addresses.</strong> Like any server, ours sees the IP address of your connection while it handles a
 request, and so do the platforms it runs on (Supabase) and Anthropic for AI requests. The platforms may keep it in
 their technical logs for a short time, as their own privacy policies describe. We never store it with anything else
