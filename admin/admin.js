@@ -4,8 +4,8 @@
 //
 // Corrections: on a wide screen an inbox (queues, list, detail, keyboard); on a phone one at a time, swiped.
 // Catalog: read-only, the products the app bundles with the approved corrections laid over them.
-// Costs: the balance first (what Pro brings in against what the AI costs), then what a Pro and a trial cost, the days,
-// where the money goes, the limits the rules allow and, last, the test builds.
+// Costs: only what the server measures. The AI per paying subscriber, the subscribers, who is near a budget, then the
+// days, where the money goes and, last, the test builds. Revenue is App Store Connect's, not shown here.
 "use strict";
 
 const SUPABASE = "https://lpajxlwmsgolxajndgdv.supabase.co";
@@ -14,15 +14,6 @@ const API = `${SUPABASE}/functions/v1/admin`;
 const SESSION_KEY = "known-admin-session";
 const EMAIL_KEY = "known-admin-email";
 const NAMES_KEY = "known-admin-names";
-// As in the `ai` function (PRO_MONTHLY_CENTS, TRIAL_CENTS) and the Pro price decided for launch. Free has no AI
-// from launch (FREE_AI off): anything it spends is shown as a warning, not as a cost to plan for.
-const PRO_CAP_CENTS = 2000;
-const TRIAL_CAP_CENTS = 300;
-const PRO_EUR_CENTS = 999;
-// What reaches Filippo of 9,99 €, in dollar cents (the AI is billed in dollars): less Italian VAT (22%, other
-// countries differ), less Apple's 15% (Small Business Program), at 1 € = 1.08 $. Assumptions: check them.
-const VAT = 0.22, APPLE_CUT = 0.15, USD_PER_EUR = 1.08;
-const PRO_NET_CENTS = (PRO_EUR_CENTS / (1 + VAT)) * (1 - APPLE_CUT) * USD_PER_EUR;
 
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -849,51 +840,43 @@ function renderCosts() {
   }
   for (const r of rows) kinds.get(r.kind).shown += Number(r.cents);
   const each = (k) => k && k.requests ? k.cents / k.requests : 0;
-  const dearest = [...kinds.entries()].filter(([, k]) => k.requests >= 5).sort((a, b) => each(b[1]) - each(a[1]))[0];
 
   if (!costRows.length) {
     put($("costs-body"), el("p", { class: "empty" }, `No AI requests ${period}.`));
     return;
   }
 
-  // Real users first: what they cost and what one device of each plan costs.
+  // Only what the server measures: the AI's cost, the subscriptions running now, who is near a budget.
   const dv = costDevices;
   const planCents = (p) => sum(real.filter((r) => r.plan === p), "cents");
-  const devices = dv ? dv.active.trial + dv.active.pro : 0;
-  const signed = (c) => `${c < 0 ? "−" : "+"}${money(Math.abs(c))}`;
-  // The balance: running paid subscriptions times what one leaves a month, over the days shown, less the AI.
-  const subs = dv?.subscriptions ?? { paying: 0, sandbox: 0 };
-  const revenue = subs.paying * PRO_NET_CENTS * (days / 30);
-  const cost = plan === "all" ? total : realCents;
-  const balance = revenue - cost;
-  const h1 = plan === "dev"
-    ? el("h1", {}, `Your test builds cost ${money(total)} ${period}.`)
-    : el("h1", {}, `Pro brought in about ${money(revenue)} ${period}, the AI cost ${money(cost)}. `,
-      el("em", { class: balance < 0 ? "neg" : "pos" }, `Balance ${signed(balance)}.`));
-  const ledger = plan === "dev" ? null : el("div", { class: "ledger" },
-    el("div", {}, el("span", {}, `Pro subscriptions: ${int(subs.paying)} paying × ${money(PRO_NET_CENTS)} a month`), el("b", {}, `+${money(revenue)}`)),
-    el("div", {}, el("span", {}, plan === "all" ? "AI, real users and test builds" : "AI, real users"), el("b", {}, `−${money(cost)}`)),
-    el("div", { class: "total" }, el("span", {}, "Balance"), el("b", { class: balance < 0 ? "neg" : "pos" }, signed(balance))),
-    el("p", {}, revenue > 0 ? `The AI takes ${Math.round((cost / revenue) * 100)}% of what Pro brings in.` : "No paying subscription yet: every cent is a cost.",
-      subs.sandbox ? ` ${int(subs.sandbox)} Sandbox ${subs.sandbox === 1 ? "subscription" : "subscriptions"} (TestFlight, free) not counted.` : ""));
-  const mix = dv ? [["on trial", dv.active.trial], ["Pro", dv.active.pro]].filter(([, n]) => n)
-    .map(([p, n]) => `${int(n)} ${p}`).join(", ") : "";
+  const subs = dv?.subscriptions ?? { paying: 0, trials: 0, sandbox: 0 };
+  const paidCents = planCents("pro") + planCents("trial"), freeCents = planCents("free");
+  const perSubscriber = subs.paying ? (paidCents / days) * 30 / subs.paying : null;
+
+  const who = plan === "real" ? "Real users' AI cost" : plan === "dev" ? "Your test builds cost" : "The AI cost";
+  const h1 = el("h1", {}, `${who} ${money(total)} ${period}. `,
+    plan === "dev" ? null : el("em", {}, perSubscriber === null ? "No paying subscriber yet." : `${money(perSubscriber)} a month per paying subscriber.`));
   const lead = plan === "dev"
     ? el("p", { class: "lead" }, "Builds run from Xcode with the development token: your own testing.")
-    : el("p", { class: "lead" }, dv ? `${int(devices)} ${devices === 1 ? "device" : "devices"} used the AI ${period}${mix ? `: ${mix}` : ""}${devices ? `, ${money(realCents / devices)} each` : ""}.` : "",
-      dv?.development ? ` ${int(dv.development)} of them ${dv.development === 1 ? "is a build" : "are builds"} signed for development: yours.` : "");
+    : el("p", { class: "lead" }, "Revenue is in ", el("a", { href: "https://appstoreconnect.apple.com/trends", target: "_blank", rel: "noopener" }, "App Store Connect › Trends"),
+      ": this page shows only what the AI costs.");
 
-  const pro = dv?.pro;
-  const margin = pro?.devices && subs.paying ? PRO_NET_CENTS - pro.avgCents : null;
-  const trials = dv?.active.trial ?? 0, freeCents = planCents("free");
-  const tiles = plan === "dev" ? null : el("div", { class: "tiles two" },
-    tile("Pro, per device this month", margin === null ? "No paying Pro yet" : signed(margin),
-      margin === null ? `Each will leave about ${money(PRO_NET_CENTS)} a month after VAT and Apple, before the AI.`
-        : `Pays about ${money(PRO_NET_CENTS)} after VAT and Apple; the AI took ${money(pro.avgCents)} on average, the most ${money(pro.maxCents)} of the ${money(pro.capCents)} cap.${pro.nearCap ? ` ${int(pro.nearCap)} near the cap.` : ""}`,
-      margin !== null && margin < 0 ? "bad" : null),
-    tile("A trial", trials ? money(planCents("trial") / trials) : "—",
-      trials ? `on average ${period}, over ${int(trials)} ${trials === 1 ? "trial device" : "trial devices"}; a trial may spend ${money(TRIAL_CAP_CENTS)}.`
-        : `No trial ${period}. A trial may spend ${money(TRIAL_CAP_CENTS)}.`));
+  const nearPro = dv?.pro.nearCap ?? 0, nearTrial = dv?.trial.nearCap ?? 0;
+  const tiles = plan === "dev" ? null : el("div", { class: "tiles" },
+    tile("AI per paying subscriber", perSubscriber === null ? "—" : money(perSubscriber),
+      perSubscriber === null
+        ? `No paying subscription yet. Pro and trials' AI: ${money(paidCents)} ${period}. Pro costs 9,99 € a month.`
+        : `a month: Pro and trials' AI (${money(paidCents)} ${period}) over ${int(subs.paying)} paying. Pro costs 9,99 € a month.`),
+    tile("Subscribers now", int(subs.paying),
+      `paying. ${int(subs.trials)} ${subs.trials === 1 ? "trial" : "trials"} running.${subs.sandbox ? ` ${int(subs.sandbox)} Sandbox (TestFlight, free) not counted.` : ""}`),
+    tile("Near their budget", int(nearPro + nearTrial),
+      dv ? `above 80%. Pro: ${int(nearPro)} of ${int(dv.pro.devices)} ${dv.pro.devices === 1 ? "device" : "devices"} this month, the most ${money(dv.pro.maxCents)} of ${money(dv.pro.capCents)}. ` +
+        `Trials: ${int(nearTrial)}, the most ${money(dv.trial.maxCents)} of ${money(dv.trial.capCents)}.` : "",
+      nearPro + nearTrial ? "bad" : null));
+
+  const freeWarning = plan !== "dev" && freeCents > 0
+    ? el("p", { class: "warn" }, `Free devices spent ${money(freeCents)} ${period}: the free AI is still on (FREE_AI). From launch it is off and this should be $0.`)
+    : null;
 
   // Day by day: every day of the period, stacked real users over test builds.
   const series = [];
@@ -937,30 +920,13 @@ function renderCosts() {
       el("span", { class: "ke" }, `${money(each(k))} each`));
   });
 
-  // The limits: what the rules allow, not what happened.
-  const dear = dearest ? each(dearest[1]) : 0, dearName = dearest ? (KINDS[dearest[0]] ?? dearest[0]).toLowerCase() : "";
-  const limits = dearest ? [
-    el("h2", {}, "Limits"),
-    el("p", { class: "sub" }, "What the rules allow, not what happened."),
-    el("div", { class: "tiles small" },
-      tile("A trial at most", money(TRIAL_CAP_CENTS), "for the whole trial, shared by its devices: what a Pro costs to win, at worst."),
-      tile("Pro pays for itself up to", int(Math.floor(PRO_NET_CENTS / dear)), `${dearName}s a month.`),
-      tile("Pro at the cap", signed(PRO_NET_CENTS - PRO_CAP_CENTS),
-        `a month: the AI may spend ${money(PRO_CAP_CENTS)} on one device, which pays about ${money(PRO_NET_CENTS)}.`,
-        PRO_NET_CENTS < PRO_CAP_CENTS ? "bad" : null)),
-    el("p", { class: "fine" }, `Pro's 9,99 € less ${Math.round(VAT * 100)}% VAT and Apple's ${Math.round(APPLE_CUT * 100)}%, at 1 € = ${USD_PER_EUR} $. Devices, not people: a second iPhone or a reinstall counts again.`),
-  ] : [];
   const tests = plan === "real" && devCents
     ? el("p", { class: "fine tests" }, `Your test builds also cost ${money(devCents)} ${period} (${Math.round((devCents / all) * 100)}% of all). `,
       el("button", { type: "button", class: "link", onclick: () => document.querySelector('#costs [data-plan="dev"]').click() }, "Show them"))
     : null;
 
-  const freeWarning = plan !== "dev" && freeCents > 0
-    ? el("p", { class: "warn" }, `Free devices spent ${money(freeCents)} ${period}: the free AI is still on (FREE_AI). From launch it is off and this should be $0.`)
-    : null;
-
   put($("costs-body"),
-    h1, ledger, lead, freeWarning, tiles,
+    h1, lead, freeWarning, tiles,
     el("h2", {}, "Day by day"),
     el("p", { class: "sub" }, "What each day cost."),
     plan === "all" ? el("div", { class: "legend" }, el("span", {}, el("i", { class: "lg-real" }), "Real users"), el("span", {}, el("i", { class: "lg-dev" }), "Test builds")) : null,
@@ -968,7 +934,7 @@ function renderCosts() {
     el("h2", {}, "Where the money goes"),
     el("p", { class: "sub" }, "Share of the spend, and what one request of each kind costs."),
     kindRows.length ? kindRows : el("p", { class: "empty" }, "Nothing spent."),
-    limits, tests,
+    tests,
     el("details", {}, el("summary", {}, "Tokens and refunds"),
       el("div", { class: "table-wrap" }, el("table", { class: "tok" },
         el("thead", {}, el("tr", {}, ["Kind", "Requests", "Input tokens", "Output tokens", "Refunded"].map((h) => el("th", { scope: "col" }, h)))),
