@@ -4,7 +4,8 @@
 //
 // Corrections: on a wide screen an inbox (queues, list, detail, keyboard); on a phone one at a time, swiped.
 // Catalog: read-only, the products the app bundles with the approved corrections laid over them.
-// Costs: a sentence first, then the worst cases, the days and where the money goes.
+// Costs: only what the server measures. The AI per paying subscriber, the subscribers, who is near a budget, then the
+// days, where the money goes and, last, the test builds. Revenue is App Store Connect's, not shown here.
 "use strict";
 
 const SUPABASE = "https://lpajxlwmsgolxajndgdv.supabase.co";
@@ -13,9 +14,6 @@ const API = `${SUPABASE}/functions/v1/admin`;
 const SESSION_KEY = "known-admin-session";
 const EMAIL_KEY = "known-admin-email";
 const NAMES_KEY = "known-admin-names";
-// As in the `ai` function (FREE_DAILY_LIMIT) and the Pro price decided for launch.
-const FREE_DAILY_LIMIT = 40;
-const PRO_EUR_CENTS = 999;
 
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -787,8 +785,9 @@ document.addEventListener("keydown", (e) => {
 
 let costsLoaded = false;
 let costRows = [];
-let days = 7;
-let plan = "all";
+let costDevices = null;
+let days = 30;
+let plan = "real";
 const KINDS = { line: "Typed or said food", voice: "Voice command", plate: "Plate or pack photo", label: "Label photo",
   lookup: "Product pick", piece: "Piece weight", unit: "Usual unit", link: "My Foods link", activity: "Activity",
   name: "Name translation", other: "Other" };
@@ -815,7 +814,9 @@ for (const b of document.querySelectorAll("#costs [data-plan]")) {
 async function loadCosts() {
   put($("costs-body"), el("p", { class: "empty" }, "Loading…"));
   try {
-    costRows = (await api(`costs?days=${days}`)).rows ?? [];
+    const data = await api(`costs?days=${days}`);
+    costRows = data.rows ?? [];
+    costDevices = data.devices ?? null;
     costsLoaded = true;
     renderCosts();
   } catch (err) {
@@ -828,7 +829,6 @@ function renderCosts() {
   const real = costRows.filter((r) => r.plan !== "dev"), dev = costRows.filter((r) => r.plan === "dev");
   const rows = plan === "real" ? real : plan === "dev" ? dev : costRows;
   const total = sum(rows, "cents"), realCents = sum(real, "cents"), devCents = sum(dev, "cents"), all = realCents + devCents;
-  const proCents = sum(real.filter((r) => r.plan === "pro"), "cents");
   const period = days === 7 ? "this week" : `in the last ${days} days`;
 
   // What one request of each kind costs, over every plan (the price doesn't depend on who asks).
@@ -840,28 +840,43 @@ function renderCosts() {
   }
   for (const r of rows) kinds.get(r.kind).shown += Number(r.cents);
   const each = (k) => k && k.requests ? k.cents / k.requests : 0;
-  const dearest = [...kinds.entries()].filter(([, k]) => k.requests >= 5).sort((a, b) => each(b[1]) - each(a[1]))[0];
 
   if (!costRows.length) {
     put($("costs-body"), el("p", { class: "empty" }, `No AI requests ${period}.`));
     return;
   }
 
-  // The sentence first.
-  const who = plan === "real" ? "Real users cost" : plan === "dev" ? "Your test builds cost" : "The AI cost";
-  const h1 = el("h1", {}, `${who} ${money(total)} ${period}. `,
-    plan === "all" && all && devCents / all > 0.5 ? el("em", {}, "Most of it was you testing.") : null);
-  const lead = el("p", { class: "lead" },
-    "Builds from Xcode: ", el("b", {}, money(devCents)), all ? ` (${Math.round((devCents / all) * 100)}%)` : "", ". Real users: ", el("b", {}, money(realCents)),
-    proCents ? `, of which Pro ${money(proCents)}.` : real.length ? ", all on the free plan." : ".");
+  // Only what the server measures: the AI's cost, the subscriptions running now, who is near a budget.
+  const dv = costDevices;
+  const planCents = (p) => sum(real.filter((r) => r.plan === p), "cents");
+  const subs = dv?.subscriptions ?? { paying: 0, trials: 0, sandbox: 0 };
+  const paidCents = planCents("pro") + planCents("trial"), freeCents = planCents("free");
+  const perSubscriber = subs.paying ? (paidCents / days) * 30 / subs.paying : null;
 
-  const tiles = dearest ? el("div", { class: "tiles" },
-    tile("A free user, on their busiest day", `≤ ${money(FREE_DAILY_LIMIT * each(dearest[1]))}`,
-      `${FREE_DAILY_LIMIT} requests a day, all ${KINDS[dearest[0]]?.toLowerCase() ?? dearest[0]}s at ${money(each(dearest[1]))} each: the worst case.`),
-    tile("Dearest request", money(each(dearest[1])),
-      `One ${KINDS[dearest[0]]?.toLowerCase() ?? dearest[0]}.${kinds.get("line") ? ` A typed food costs ${money(each(kinds.get("line")))}.` : ""}`),
-    tile("Pro pays 9,99 € a month", `${int(Math.floor(PRO_EUR_CENTS / each(dearest[1])))}`,
-      `${KINDS[dearest[0]]?.toLowerCase() ?? dearest[0]}s a month before a Pro user costs more than they pay (dollars ≈ euros).`)) : null;
+  const who = plan === "real" ? "Real users' AI cost" : plan === "dev" ? "Your test builds cost" : "The AI cost";
+  const h1 = el("h1", {}, `${who} ${money(total)} ${period}. `,
+    plan === "dev" ? null : el("em", {}, perSubscriber === null ? "No paying subscriber yet." : `${money(perSubscriber)} a month per paying subscriber.`));
+  const lead = plan === "dev"
+    ? el("p", { class: "lead" }, "Builds run from Xcode with the development token: your own testing.")
+    : el("p", { class: "lead" }, "Revenue is in ", el("a", { href: "https://appstoreconnect.apple.com/trends", target: "_blank", rel: "noopener" }, "App Store Connect › Trends"),
+      ": this page shows only what the AI costs.");
+
+  const nearPro = dv?.pro.nearCap ?? 0, nearTrial = dv?.trial.nearCap ?? 0;
+  const tiles = plan === "dev" ? null : el("div", { class: "tiles" },
+    tile("AI per paying subscriber", perSubscriber === null ? "—" : money(perSubscriber),
+      perSubscriber === null
+        ? `No paying subscription yet. Pro and trials' AI: ${money(paidCents)} ${period}. Pro costs 9,99 € a month.`
+        : `a month: Pro and trials' AI (${money(paidCents)} ${period}) over ${int(subs.paying)} paying. Pro costs 9,99 € a month.`),
+    tile("Subscribers now", int(subs.paying),
+      `paying. ${int(subs.trials)} ${subs.trials === 1 ? "trial" : "trials"} running.${subs.sandbox ? ` ${int(subs.sandbox)} Sandbox (TestFlight, free) not counted.` : ""}`),
+    tile("Near their budget", int(nearPro + nearTrial),
+      dv ? `above 80%. Pro: ${int(nearPro)} of ${int(dv.pro.devices)} ${dv.pro.devices === 1 ? "device" : "devices"} this month, the most ${money(dv.pro.maxCents)} of ${money(dv.pro.capCents)}. ` +
+        `Trials: ${int(nearTrial)}, the most ${money(dv.trial.maxCents)} of ${money(dv.trial.capCents)}.` : "",
+      nearPro + nearTrial ? "bad" : null));
+
+  const freeWarning = plan !== "dev" && freeCents > 0
+    ? el("p", { class: "warn" }, `Free devices spent ${money(freeCents)} ${period}: the free AI is still on (FREE_AI). From launch it is off and this should be $0.`)
+    : null;
 
   // Day by day: every day of the period, stacked real users over test builds.
   const series = [];
@@ -905,8 +920,13 @@ function renderCosts() {
       el("span", { class: "ke" }, `${money(each(k))} each`));
   });
 
-  put($("costs-body"), 
-    h1, lead, tiles,
+  const tests = plan === "real" && devCents
+    ? el("p", { class: "fine tests" }, `Your test builds also cost ${money(devCents)} ${period} (${Math.round((devCents / all) * 100)}% of all). `,
+      el("button", { type: "button", class: "link", onclick: () => document.querySelector('#costs [data-plan="dev"]').click() }, "Show them"))
+    : null;
+
+  put($("costs-body"),
+    h1, lead, freeWarning, tiles,
     el("h2", {}, "Day by day"),
     el("p", { class: "sub" }, "What each day cost."),
     plan === "all" ? el("div", { class: "legend" }, el("span", {}, el("i", { class: "lg-real" }), "Real users"), el("span", {}, el("i", { class: "lg-dev" }), "Test builds")) : null,
@@ -914,6 +934,7 @@ function renderCosts() {
     el("h2", {}, "Where the money goes"),
     el("p", { class: "sub" }, "Share of the spend, and what one request of each kind costs."),
     kindRows.length ? kindRows : el("p", { class: "empty" }, "Nothing spent."),
+    tests,
     el("details", {}, el("summary", {}, "Tokens and refunds"),
       el("div", { class: "table-wrap" }, el("table", { class: "tok" },
         el("thead", {}, el("tr", {}, ["Kind", "Requests", "Input tokens", "Output tokens", "Refunded"].map((h) => el("th", { scope: "col" }, h)))),
@@ -930,8 +951,8 @@ function niceStep(max) {
   return [1, 2, 5, 10].map((m) => m * p).find((s) => s >= raw);
 }
 
-function tile(title, value, text) {
-  return el("div", { class: "tile" }, el("p", {}, title), el("strong", {}, value), el("small", {}, text));
+function tile(title, value, text, tone = null) {
+  return el("div", { class: tone ? `tile ${tone}` : "tile" }, el("p", {}, title), el("strong", {}, value), el("small", {}, text));
 }
 
 // ---------- Start ----------
