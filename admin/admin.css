@@ -160,6 +160,11 @@ td.d{color:var(--muted);font-size:13px;width:64px}
 .tile p{margin:0;color:var(--muted);font-size:13px}
 .tile strong{display:block;font-size:30px;letter-spacing:-.02em;margin:4px 0}
 .tile small{color:var(--body);font-size:13px}
+.tile.bad strong{color:var(--red)}
+.tiles.small .tile strong{font-size:22px}
+.costs .fine{color:var(--muted);font-size:13px;margin:12px 0 0;max-width:72ch}
+.costs .fine.tests{margin-top:32px;font-size:14px;color:var(--body)}
+.costs .fine .link{min-height:44px;padding:0 4px;color:var(--fg);text-decoration:underline}
 .costs h2{font-size:20px;margin:40px 0 4px}
 .costs .sub{color:var(--muted);margin:0 0 14px;font-size:14px}
 .legend{display:flex;gap:16px;font-size:13px;color:var(--body);margin-bottom:10px}

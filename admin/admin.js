@@ -4,7 +4,8 @@
 //
 // Corrections: on a wide screen an inbox (queues, list, detail, keyboard); on a phone one at a time, swiped.
 // Catalog: read-only, the products the app bundles with the approved corrections laid over them.
-// Costs: a sentence first, then the worst cases, the days and where the money goes.
+// Costs: real users first (what they cost, what a Pro and a free device cost, the month at this pace), then the days,
+// where the money goes, the limits the rules allow and, last, the test builds.
 "use strict";
 
 const SUPABASE = "https://lpajxlwmsgolxajndgdv.supabase.co";
@@ -13,9 +14,14 @@ const API = `${SUPABASE}/functions/v1/admin`;
 const SESSION_KEY = "known-admin-session";
 const EMAIL_KEY = "known-admin-email";
 const NAMES_KEY = "known-admin-names";
-// As in the `ai` function (FREE_DAILY_LIMIT) and the Pro price decided for launch.
+// As in the `ai` function (FREE_DAILY_LIMIT, PRO_MONTHLY_CENTS) and the Pro price decided for launch.
 const FREE_DAILY_LIMIT = 40;
+const PRO_CAP_CENTS = 2000;
 const PRO_EUR_CENTS = 999;
+// What reaches Filippo of 9,99 €, in dollar cents (the AI is billed in dollars): less Italian VAT (22%, other
+// countries differ), less Apple's 15% (Small Business Program), at 1 € = 1.08 $. Assumptions: check them.
+const VAT = 0.22, APPLE_CUT = 0.15, USD_PER_EUR = 1.08;
+const PRO_NET_CENTS = (PRO_EUR_CENTS / (1 + VAT)) * (1 - APPLE_CUT) * USD_PER_EUR;
 
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -787,8 +793,9 @@ document.addEventListener("keydown", (e) => {
 
 let costsLoaded = false;
 let costRows = [];
-let days = 7;
-let plan = "all";
+let costDevices = null;
+let days = 30;
+let plan = "real";
 const KINDS = { line: "Typed or said food", voice: "Voice command", plate: "Plate or pack photo", label: "Label photo",
   lookup: "Product pick", piece: "Piece weight", unit: "Usual unit", link: "My Foods link", activity: "Activity",
   name: "Name translation", other: "Other" };
@@ -815,7 +822,9 @@ for (const b of document.querySelectorAll("#costs [data-plan]")) {
 async function loadCosts() {
   put($("costs-body"), el("p", { class: "empty" }, "Loading…"));
   try {
-    costRows = (await api(`costs?days=${days}`)).rows ?? [];
+    const data = await api(`costs?days=${days}`);
+    costRows = data.rows ?? [];
+    costDevices = data.devices ?? null;
     costsLoaded = true;
     renderCosts();
   } catch (err) {
@@ -847,21 +856,35 @@ function renderCosts() {
     return;
   }
 
-  // The sentence first.
+  // Real users first: what they cost and what one device of each plan costs.
+  const dv = costDevices;
+  const planCents = (p) => sum(real.filter((r) => r.plan === p), "cents");
+  const devices = dv ? dv.active.free + dv.active.trial + dv.active.pro : 0;
+  const perMonth = (cents) => (cents / days) * 30;
+  const signed = (c) => `${c < 0 ? "−" : "+"}${money(Math.abs(c))}`;
   const who = plan === "real" ? "Real users cost" : plan === "dev" ? "Your test builds cost" : "The AI cost";
   const h1 = el("h1", {}, `${who} ${money(total)} ${period}. `,
-    plan === "all" && all && devCents / all > 0.5 ? el("em", {}, "Most of it was you testing.") : null);
-  const lead = el("p", { class: "lead" },
-    "Builds from Xcode: ", el("b", {}, money(devCents)), all ? ` (${Math.round((devCents / all) * 100)}%)` : "", ". Real users: ", el("b", {}, money(realCents)),
-    proCents ? `, of which Pro ${money(proCents)}.` : real.length ? ", all on the free plan." : ".");
+    plan !== "dev" && devices ? el("em", {}, `${money(realCents / devices)} per device.`) : null);
+  const mix = dv ? [["free", dv.active.free], ["on trial", dv.active.trial], ["Pro", dv.active.pro]].filter(([, n]) => n)
+    .map(([p, n]) => `${int(n)} ${p}`).join(", ") : "";
+  const lead = plan === "dev"
+    ? el("p", { class: "lead" }, "Builds run from Xcode with the development token: your own testing.")
+    : el("p", { class: "lead" }, dv ? `${int(devices)} ${devices === 1 ? "device" : "devices"} used the AI ${period}${mix ? `: ${mix}` : ""}.` : "",
+      dv?.development ? ` ${int(dv.development)} of them ${dv.development === 1 ? "is a build" : "are builds"} signed for development: yours.` : "");
 
-  const tiles = dearest ? el("div", { class: "tiles" },
-    tile("A free user, on their busiest day", `≤ ${money(FREE_DAILY_LIMIT * each(dearest[1]))}`,
-      `${FREE_DAILY_LIMIT} requests a day, all ${KINDS[dearest[0]]?.toLowerCase() ?? dearest[0]}s at ${money(each(dearest[1]))} each: the worst case.`),
-    tile("Dearest request", money(each(dearest[1])),
-      `One ${KINDS[dearest[0]]?.toLowerCase() ?? dearest[0]}.${kinds.get("line") ? ` A typed food costs ${money(each(kinds.get("line")))}.` : ""}`),
-    tile("Pro pays 9,99 € a month", `${int(Math.floor(PRO_EUR_CENTS / each(dearest[1])))}`,
-      `${KINDS[dearest[0]]?.toLowerCase() ?? dearest[0]}s a month before a Pro user costs more than they pay (dollars ≈ euros).`)) : null;
+  const pro = dv?.pro;
+  const margin = pro?.devices ? PRO_NET_CENTS - pro.avgCents : null;
+  const freeDevices = dv?.active.free ?? 0;
+  const tiles = plan === "dev" ? null : el("div", { class: "tiles" },
+    tile("Pro, per device this month", margin === null ? "No Pro yet" : signed(margin),
+      margin === null ? `Each will leave about ${money(PRO_NET_CENTS)} a month after VAT and Apple, before the AI.`
+        : `Pays about ${money(PRO_NET_CENTS)} after VAT and Apple; the AI took ${money(pro.avgCents)} on average, the most ${money(pro.maxCents)} of the ${money(pro.capCents)} cap.${pro.nearCap ? ` ${int(pro.nearCap)} near the cap.` : ""}`,
+      margin !== null && margin < 0 ? "bad" : null),
+    tile("A free device", freeDevices ? money(perMonth(planCents("free") / freeDevices)) : "—",
+      freeDevices ? `a month on average, over ${int(freeDevices)} ${freeDevices === 1 ? "device" : "devices"}.${dv.atLimitToday ? ` ${int(dv.atLimitToday)} hit the ${FREE_DAILY_LIMIT}-request limit today.` : ""}`
+        : `No free device used the AI ${period}.`),
+    tile("A month at this pace", money(perMonth(realCents)),
+      `for real users, from the ${days} days shown.${proCents ? ` Pro is ${money(perMonth(proCents))} of it.` : ""}`));
 
   // Day by day: every day of the period, stacked real users over test builds.
   const series = [];
@@ -905,7 +928,26 @@ function renderCosts() {
       el("span", { class: "ke" }, `${money(each(k))} each`));
   });
 
-  put($("costs-body"), 
+  // The limits: what the rules allow, not what happened.
+  const dear = dearest ? each(dearest[1]) : 0, dearName = dearest ? (KINDS[dearest[0]] ?? dearest[0]).toLowerCase() : "";
+  const limits = dearest ? [
+    el("h2", {}, "Limits"),
+    el("p", { class: "sub" }, "What the rules allow, not what happened."),
+    el("div", { class: "tiles small" },
+      tile("A free device, every day at the limit", money(FREE_DAILY_LIMIT * dear * 30),
+        `a month: ${FREE_DAILY_LIMIT} ${dearName}s a day at ${money(dear)}.`),
+      tile("Pro pays for itself up to", int(Math.floor(PRO_NET_CENTS / dear)), `${dearName}s a month.`),
+      tile("Pro at the cap", signed(PRO_NET_CENTS - PRO_CAP_CENTS),
+        `a month: the AI may spend ${money(PRO_CAP_CENTS)} on one device, which pays about ${money(PRO_NET_CENTS)}.`,
+        PRO_NET_CENTS < PRO_CAP_CENTS ? "bad" : null)),
+    el("p", { class: "fine" }, `Pro's 9,99 € less ${Math.round(VAT * 100)}% VAT and Apple's ${Math.round(APPLE_CUT * 100)}%, at 1 € = ${USD_PER_EUR} $. Devices, not people: a second iPhone or a reinstall counts again.`),
+  ] : [];
+  const tests = plan === "real" && devCents
+    ? el("p", { class: "fine tests" }, `Your test builds also cost ${money(devCents)} ${period} (${Math.round((devCents / all) * 100)}% of all). `,
+      el("button", { type: "button", class: "link", onclick: () => document.querySelector('#costs [data-plan="dev"]').click() }, "Show them"))
+    : null;
+
+  put($("costs-body"),
     h1, lead, tiles,
     el("h2", {}, "Day by day"),
     el("p", { class: "sub" }, "What each day cost."),
@@ -914,6 +956,7 @@ function renderCosts() {
     el("h2", {}, "Where the money goes"),
     el("p", { class: "sub" }, "Share of the spend, and what one request of each kind costs."),
     kindRows.length ? kindRows : el("p", { class: "empty" }, "Nothing spent."),
+    limits, tests,
     el("details", {}, el("summary", {}, "Tokens and refunds"),
       el("div", { class: "table-wrap" }, el("table", { class: "tok" },
         el("thead", {}, el("tr", {}, ["Kind", "Requests", "Input tokens", "Output tokens", "Refunded"].map((h) => el("th", { scope: "col" }, h)))),
@@ -930,8 +973,8 @@ function niceStep(max) {
   return [1, 2, 5, 10].map((m) => m * p).find((s) => s >= raw);
 }
 
-function tile(title, value, text) {
-  return el("div", { class: "tile" }, el("p", {}, title), el("strong", {}, value), el("small", {}, text));
+function tile(title, value, text, tone = null) {
+  return el("div", { class: tone ? `tile ${tone}` : "tile" }, el("p", {}, title), el("strong", {}, value), el("small", {}, text));
 }
 
 // ---------- Start ----------
