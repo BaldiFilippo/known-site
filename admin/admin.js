@@ -4,7 +4,7 @@
 //
 // Corrections: on a wide screen an inbox (queues, list, detail, keyboard); on a phone one at a time, swiped.
 // Catalog: read-only, the products the app bundles with the approved corrections laid over them.
-// Costs: real users first (what they cost, what a Pro and a trial cost, the month at this pace), then the days,
+// Costs: the balance first (what Pro brings in against what the AI costs), then what a Pro and a trial cost, the days,
 // where the money goes, the limits the rules allow and, last, the test builds.
 "use strict";
 
@@ -838,7 +838,6 @@ function renderCosts() {
   const real = costRows.filter((r) => r.plan !== "dev"), dev = costRows.filter((r) => r.plan === "dev");
   const rows = plan === "real" ? real : plan === "dev" ? dev : costRows;
   const total = sum(rows, "cents"), realCents = sum(real, "cents"), devCents = sum(dev, "cents"), all = realCents + devCents;
-  const proCents = sum(real.filter((r) => r.plan === "pro"), "cents");
   const period = days === 7 ? "this week" : `in the last ${days} days`;
 
   // What one request of each kind costs, over every plan (the price doesn't depend on who asks).
@@ -861,31 +860,40 @@ function renderCosts() {
   const dv = costDevices;
   const planCents = (p) => sum(real.filter((r) => r.plan === p), "cents");
   const devices = dv ? dv.active.trial + dv.active.pro : 0;
-  const perMonth = (cents) => (cents / days) * 30;
   const signed = (c) => `${c < 0 ? "−" : "+"}${money(Math.abs(c))}`;
-  const who = plan === "real" ? "Real users cost" : plan === "dev" ? "Your test builds cost" : "The AI cost";
-  const h1 = el("h1", {}, `${who} ${money(total)} ${period}. `,
-    plan !== "dev" && devices ? el("em", {}, `${money(realCents / devices)} per device.`) : null);
+  // The balance: running paid subscriptions times what one leaves a month, over the days shown, less the AI.
+  const subs = dv?.subscriptions ?? { paying: 0, sandbox: 0 };
+  const revenue = subs.paying * PRO_NET_CENTS * (days / 30);
+  const cost = plan === "all" ? total : realCents;
+  const balance = revenue - cost;
+  const h1 = plan === "dev"
+    ? el("h1", {}, `Your test builds cost ${money(total)} ${period}.`)
+    : el("h1", {}, `Pro brought in about ${money(revenue)} ${period}, the AI cost ${money(cost)}. `,
+      el("em", { class: balance < 0 ? "neg" : "pos" }, `Balance ${signed(balance)}.`));
+  const ledger = plan === "dev" ? null : el("div", { class: "ledger" },
+    el("div", {}, el("span", {}, `Pro subscriptions: ${int(subs.paying)} paying × ${money(PRO_NET_CENTS)} a month`), el("b", {}, `+${money(revenue)}`)),
+    el("div", {}, el("span", {}, plan === "all" ? "AI, real users and test builds" : "AI, real users"), el("b", {}, `−${money(cost)}`)),
+    el("div", { class: "total" }, el("span", {}, "Balance"), el("b", { class: balance < 0 ? "neg" : "pos" }, signed(balance))),
+    el("p", {}, revenue > 0 ? `The AI takes ${Math.round((cost / revenue) * 100)}% of what Pro brings in.` : "No paying subscription yet: every cent is a cost.",
+      subs.sandbox ? ` ${int(subs.sandbox)} Sandbox ${subs.sandbox === 1 ? "subscription" : "subscriptions"} (TestFlight, free) not counted.` : ""));
   const mix = dv ? [["on trial", dv.active.trial], ["Pro", dv.active.pro]].filter(([, n]) => n)
     .map(([p, n]) => `${int(n)} ${p}`).join(", ") : "";
   const lead = plan === "dev"
     ? el("p", { class: "lead" }, "Builds run from Xcode with the development token: your own testing.")
-    : el("p", { class: "lead" }, dv ? `${int(devices)} ${devices === 1 ? "device" : "devices"} used the AI ${period}${mix ? `: ${mix}` : ""}.` : "",
+    : el("p", { class: "lead" }, dv ? `${int(devices)} ${devices === 1 ? "device" : "devices"} used the AI ${period}${mix ? `: ${mix}` : ""}${devices ? `, ${money(realCents / devices)} each` : ""}.` : "",
       dv?.development ? ` ${int(dv.development)} of them ${dv.development === 1 ? "is a build" : "are builds"} signed for development: yours.` : "");
 
   const pro = dv?.pro;
-  const margin = pro?.devices ? PRO_NET_CENTS - pro.avgCents : null;
+  const margin = pro?.devices && subs.paying ? PRO_NET_CENTS - pro.avgCents : null;
   const trials = dv?.active.trial ?? 0, freeCents = planCents("free");
-  const tiles = plan === "dev" ? null : el("div", { class: "tiles" },
-    tile("Pro, per device this month", margin === null ? "No Pro yet" : signed(margin),
+  const tiles = plan === "dev" ? null : el("div", { class: "tiles two" },
+    tile("Pro, per device this month", margin === null ? "No paying Pro yet" : signed(margin),
       margin === null ? `Each will leave about ${money(PRO_NET_CENTS)} a month after VAT and Apple, before the AI.`
         : `Pays about ${money(PRO_NET_CENTS)} after VAT and Apple; the AI took ${money(pro.avgCents)} on average, the most ${money(pro.maxCents)} of the ${money(pro.capCents)} cap.${pro.nearCap ? ` ${int(pro.nearCap)} near the cap.` : ""}`,
       margin !== null && margin < 0 ? "bad" : null),
     tile("A trial", trials ? money(planCents("trial") / trials) : "—",
       trials ? `on average ${period}, over ${int(trials)} ${trials === 1 ? "trial device" : "trial devices"}; a trial may spend ${money(TRIAL_CAP_CENTS)}.`
-        : `No trial ${period}. A trial may spend ${money(TRIAL_CAP_CENTS)}.`),
-    tile("A month at this pace", money(perMonth(realCents)),
-      `for real users, from the ${days} days shown.${proCents ? ` Pro is ${money(perMonth(proCents))} of it.` : ""}`));
+        : `No trial ${period}. A trial may spend ${money(TRIAL_CAP_CENTS)}.`));
 
   // Day by day: every day of the period, stacked real users over test builds.
   const series = [];
@@ -952,7 +960,7 @@ function renderCosts() {
     : null;
 
   put($("costs-body"),
-    h1, lead, freeWarning, tiles,
+    h1, ledger, lead, freeWarning, tiles,
     el("h2", {}, "Day by day"),
     el("p", { class: "sub" }, "What each day cost."),
     plan === "all" ? el("div", { class: "legend" }, el("span", {}, el("i", { class: "lg-real" }), "Real users"), el("span", {}, el("i", { class: "lg-dev" }), "Test builds")) : null,
