@@ -4,7 +4,7 @@
 //
 // Corrections: on a wide screen an inbox (queues, list, detail, keyboard); on a phone one at a time, swiped.
 // Catalog: read-only, the products the app bundles with the approved corrections laid over them.
-// Costs: real users first (what they cost, what a Pro and a free device cost, the month at this pace), then the days,
+// Costs: real users first (what they cost, what a Pro and a trial cost, the month at this pace), then the days,
 // where the money goes, the limits the rules allow and, last, the test builds.
 "use strict";
 
@@ -14,9 +14,10 @@ const API = `${SUPABASE}/functions/v1/admin`;
 const SESSION_KEY = "known-admin-session";
 const EMAIL_KEY = "known-admin-email";
 const NAMES_KEY = "known-admin-names";
-// As in the `ai` function (FREE_DAILY_LIMIT, PRO_MONTHLY_CENTS) and the Pro price decided for launch.
-const FREE_DAILY_LIMIT = 40;
+// As in the `ai` function (PRO_MONTHLY_CENTS, TRIAL_CENTS) and the Pro price decided for launch. Free has no AI
+// from launch (FREE_AI off): anything it spends is shown as a warning, not as a cost to plan for.
 const PRO_CAP_CENTS = 2000;
+const TRIAL_CAP_CENTS = 300;
 const PRO_EUR_CENTS = 999;
 // What reaches Filippo of 9,99 €, in dollar cents (the AI is billed in dollars): less Italian VAT (22%, other
 // countries differ), less Apple's 15% (Small Business Program), at 1 € = 1.08 $. Assumptions: check them.
@@ -859,13 +860,13 @@ function renderCosts() {
   // Real users first: what they cost and what one device of each plan costs.
   const dv = costDevices;
   const planCents = (p) => sum(real.filter((r) => r.plan === p), "cents");
-  const devices = dv ? dv.active.free + dv.active.trial + dv.active.pro : 0;
+  const devices = dv ? dv.active.trial + dv.active.pro : 0;
   const perMonth = (cents) => (cents / days) * 30;
   const signed = (c) => `${c < 0 ? "−" : "+"}${money(Math.abs(c))}`;
   const who = plan === "real" ? "Real users cost" : plan === "dev" ? "Your test builds cost" : "The AI cost";
   const h1 = el("h1", {}, `${who} ${money(total)} ${period}. `,
     plan !== "dev" && devices ? el("em", {}, `${money(realCents / devices)} per device.`) : null);
-  const mix = dv ? [["free", dv.active.free], ["on trial", dv.active.trial], ["Pro", dv.active.pro]].filter(([, n]) => n)
+  const mix = dv ? [["on trial", dv.active.trial], ["Pro", dv.active.pro]].filter(([, n]) => n)
     .map(([p, n]) => `${int(n)} ${p}`).join(", ") : "";
   const lead = plan === "dev"
     ? el("p", { class: "lead" }, "Builds run from Xcode with the development token: your own testing.")
@@ -874,15 +875,15 @@ function renderCosts() {
 
   const pro = dv?.pro;
   const margin = pro?.devices ? PRO_NET_CENTS - pro.avgCents : null;
-  const freeDevices = dv?.active.free ?? 0;
+  const trials = dv?.active.trial ?? 0, freeCents = planCents("free");
   const tiles = plan === "dev" ? null : el("div", { class: "tiles" },
     tile("Pro, per device this month", margin === null ? "No Pro yet" : signed(margin),
       margin === null ? `Each will leave about ${money(PRO_NET_CENTS)} a month after VAT and Apple, before the AI.`
         : `Pays about ${money(PRO_NET_CENTS)} after VAT and Apple; the AI took ${money(pro.avgCents)} on average, the most ${money(pro.maxCents)} of the ${money(pro.capCents)} cap.${pro.nearCap ? ` ${int(pro.nearCap)} near the cap.` : ""}`,
       margin !== null && margin < 0 ? "bad" : null),
-    tile("A free device", freeDevices ? money(perMonth(planCents("free") / freeDevices)) : "—",
-      freeDevices ? `a month on average, over ${int(freeDevices)} ${freeDevices === 1 ? "device" : "devices"}.${dv.atLimitToday ? ` ${int(dv.atLimitToday)} hit the ${FREE_DAILY_LIMIT}-request limit today.` : ""}`
-        : `No free device used the AI ${period}.`),
+    tile("A trial", trials ? money(planCents("trial") / trials) : "—",
+      trials ? `on average ${period}, over ${int(trials)} ${trials === 1 ? "trial device" : "trial devices"}; a trial may spend ${money(TRIAL_CAP_CENTS)}.`
+        : `No trial ${period}. A trial may spend ${money(TRIAL_CAP_CENTS)}.`),
     tile("A month at this pace", money(perMonth(realCents)),
       `for real users, from the ${days} days shown.${proCents ? ` Pro is ${money(perMonth(proCents))} of it.` : ""}`));
 
@@ -934,8 +935,7 @@ function renderCosts() {
     el("h2", {}, "Limits"),
     el("p", { class: "sub" }, "What the rules allow, not what happened."),
     el("div", { class: "tiles small" },
-      tile("A free device, every day at the limit", money(FREE_DAILY_LIMIT * dear * 30),
-        `a month: ${FREE_DAILY_LIMIT} ${dearName}s a day at ${money(dear)}.`),
+      tile("A trial at most", money(TRIAL_CAP_CENTS), "for the whole trial, shared by its devices: what a Pro costs to win, at worst."),
       tile("Pro pays for itself up to", int(Math.floor(PRO_NET_CENTS / dear)), `${dearName}s a month.`),
       tile("Pro at the cap", signed(PRO_NET_CENTS - PRO_CAP_CENTS),
         `a month: the AI may spend ${money(PRO_CAP_CENTS)} on one device, which pays about ${money(PRO_NET_CENTS)}.`,
@@ -947,8 +947,12 @@ function renderCosts() {
       el("button", { type: "button", class: "link", onclick: () => document.querySelector('#costs [data-plan="dev"]').click() }, "Show them"))
     : null;
 
+  const freeWarning = plan !== "dev" && freeCents > 0
+    ? el("p", { class: "warn" }, `Free devices spent ${money(freeCents)} ${period}: the free AI is still on (FREE_AI). From launch it is off and this should be $0.`)
+    : null;
+
   put($("costs-body"),
-    h1, lead, tiles,
+    h1, lead, freeWarning, tiles,
     el("h2", {}, "Day by day"),
     el("p", { class: "sub" }, "What each day cost."),
     plan === "all" ? el("div", { class: "legend" }, el("span", {}, el("i", { class: "lg-real" }), "Real users"), el("span", {}, el("i", { class: "lg-dev" }), "Test builds")) : null,
