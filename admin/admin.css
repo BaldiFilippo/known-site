@@ -56,6 +56,9 @@ input{font:inherit;color:var(--fg);background:var(--card);border:1px solid var(-
 .q[aria-current=true]{background:var(--card2);color:var(--fg);font-weight:600}
 .q:hover{color:var(--fg)}
 .progress{margin:22px 12px 0;font-size:13px;color:var(--muted)}
+.reminder{margin:16px 12px 24px;padding:12px;font-size:13px;color:var(--body);background:var(--card);border:1px solid var(--line);border-radius:12px;overflow-wrap:anywhere}
+.reminder strong{display:block;color:var(--yellow);font-weight:600}
+.mob .reminder{margin-left:0;margin-right:0}
 .list{border-right:1px solid var(--rule);display:flex;flex-direction:column;min-height:0}
 .search{padding:12px 14px;border-bottom:1px solid var(--rule)}
 .search input{height:38px;border-radius:10px}

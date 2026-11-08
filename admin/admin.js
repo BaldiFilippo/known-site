@@ -406,6 +406,11 @@ function render() {
   renderMobile();
 }
 
+/** Approvals reach the app on their own; only the copy bundled in a new build needs this, once per release. */
+const syncReminder = () => el("p", { class: "reminder" },
+  el("strong", {}, "Before an App Store build"),
+  " run sync-approved.sh, so new installs start with your approvals.");
+
 function renderQueues() {
   const doneRows = decidedRows();
   const button = (id, title, count, badge) => el("button", {
@@ -416,7 +421,8 @@ function renderQueues() {
     ...QUEUES.map((q) => button(q.id, q.title, inQueue(q.id).length, q.badge)),
     el("h4", {}, "Decided"),
     button("done", "Last 7 days", doneRows.length),
-    el("p", { class: "progress" }, `${doneRows.filter((r) => r.review === "accepted").length} approved, ${doneRows.filter((r) => r.review === "rejected").length} rejected this week`));
+    el("p", { class: "progress" }, `${doneRows.filter((r) => r.review === "accepted").length} approved, ${doneRows.filter((r) => r.review === "rejected").length} rejected this week`),
+    syncReminder());
 }
 
 function renderList() {
@@ -516,7 +522,8 @@ function renderMobile() {
       el("button", { type: "button", onclick: () => startReview("easy") }, "One by one")),
     step("New values", others.length, "y", "Label photos and typed values that differ from what the app had.",
       el("button", { type: "button", class: "approve", onclick: () => startReview("others") }, "Start")),
-    el("p", { class: "mini" }, `This week: ${doneRows.filter((r) => r.review === "accepted").length} approved, ${doneRows.filter((r) => r.review === "rejected").length} rejected`));
+    el("p", { class: "mini" }, `This week: ${doneRows.filter((r) => r.review === "accepted").length} approved, ${doneRows.filter((r) => r.review === "rejected").length} rejected`),
+    syncReminder());
 }
 
 const MOB_QUEUES = {
