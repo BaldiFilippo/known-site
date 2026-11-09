@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Known – The food diary you can trust</title>
-<meta name="description" content="Known is a food diary for iPhone. Every number says where it comes from: the label, a product database still to confirm, or an estimate by the most advanced AI models. Together, we check every food until all of them are verified.">
+<meta name="description" content="Known is a food diary for iPhone, made for people who keep track every day: for training, for a calorie budget, for a low carb diet. Every number says where it comes from: the label, a product database still to confirm, or an estimate by the most advanced AI models.">
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#000000">
 <meta property="og:type" content="website">
@@ -17,59 +17,111 @@
 <link rel="icon" type="image/png" sizes="64x64" href="../assets/favicon.png">
 <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
 <style>
-:root{--bg:#000;--fg:#f4f4f4;--muted:#8d8d92;--muted2:#5c5c62;--rule:#1c1c1f;--card:#0d0d0f;--blue:#2A8ED1;color-scheme:dark}
+/* Layout: the live Night landing, reordered as an argument: who, why, then how. */
+:root{--bg:#000;--fg:#f4f4f4;--muted:#8d8d92;--rule:#1c1c1f;--card:#0d0d0f;--blue:#2A8ED1;color-scheme:dark}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
 html,body{overflow-x:hidden}
 body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
 a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
 .wrap{max-width:1120px;margin:0 auto;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
 .wordmark{display:inline-block;line-height:0}.wordmark img{height:1em;width:auto;display:block}
+.wm{display:inline-block;height:.74em;aspect-ratio:2826/713;background:currentColor;-webkit-mask:url(../assets/wordmark-white.svg) center/contain no-repeat;mask:url(../assets/wordmark-white.svg) center/contain no-repeat}
 
-/* nav */
 nav.top{display:flex;align-items:center;justify-content:space-between;height:76px}
 nav.top .wordmark{font-size:22px}
 nav.top .links{display:flex;gap:30px;font-size:15px;color:var(--muted)}
 nav.top .links a:hover{color:var(--fg)}
 
-/* App Store badge, drawn like Apple's black badge */
 .badge{display:inline-flex;align-items:center;gap:9px;height:48px;padding:0 16px 0 13px;border-radius:9px;background:#000;color:#fff;border:1px solid #a6a6a6;line-height:1}
 .badge svg{width:24px;height:24px;fill:#fff}
 .badge span{display:flex;flex-direction:column;gap:2px;text-align:left}
 .badge small{font-size:10px;letter-spacing:.01em}
 .badge b{font-size:19px;font-weight:500;letter-spacing:-.01em}
 
-/* hero */
 .hero{text-align:center;padding:84px 0 0;position:relative}
-
-.hero h1{font-size:clamp(44px,6.8vw,84px);line-height:1;letter-spacing:-.04em;font-weight:600;margin:0 0 22px;text-wrap:balance}
-.hero p{font-size:21px;color:var(--muted);margin:0 0 36px}
-.glow{position:absolute;left:50%;top:420px;width:1100px;height:600px;transform:translateX(-50%);background:radial-gradient(closest-side,rgba(255,255,255,.13),transparent 70%);pointer-events:none}
-.phones{position:relative;display:flex;justify-content:center;align-items:flex-start;gap:40px;margin-top:80px;height:720px;overflow:hidden;-webkit-mask:linear-gradient(#000 88%,transparent);mask:linear-gradient(#000 88%,transparent)}
+.hero h1{font-size:clamp(40px,6.2vw,78px);line-height:1.02;letter-spacing:-.04em;font-weight:600;margin:0 auto 24px;max-width:960px;text-wrap:balance}
+.hero h1 span{color:var(--muted);font-weight:500}
+.hero p{font-size:clamp(18px,1.8vw,21px);color:var(--muted);margin:0 auto 36px;max-width:620px;text-wrap:balance}
+.glow{position:absolute;left:50%;top:460px;width:min(1100px,100%);height:600px;transform:translateX(-50%);background:radial-gradient(closest-side,rgba(255,255,255,.13),transparent 70%);pointer-events:none}
+.phones{position:relative;display:flex;justify-content:center;align-items:flex-start;gap:40px;margin-top:72px;height:640px;overflow:hidden;-webkit-mask:linear-gradient(#000 84%,transparent);mask:linear-gradient(#000 84%,transparent)}
 .phones .device:nth-child(2){width:340px}
 .phones .device:nth-child(1),.phones .device:nth-child(3){width:300px;margin-top:40px}
-
-/* device frame: titanium edge, black inner bezel, screen, Dynamic Island, side buttons */
-.device{position:relative;width:300px;aspect-ratio:1320/2868;flex:none;filter:drop-shadow(0 40px 60px rgba(0,0,0,.6))}
+.device{position:relative;width:300px;max-width:100%;aspect-ratio:1320/2868;flex:none;filter:drop-shadow(0 40px 60px rgba(0,0,0,.6))}
 .device .edge{position:absolute;inset:0;border-radius:16.8%/7.73%;padding:1.2%;background:linear-gradient(140deg,#5b5b60 0%,#2a2a2e 30%,#1a1a1d 60%,#4a4a50 100%);box-shadow:0 0 0 1px rgba(255,255,255,.08)}
 .device .bezel{width:100%;height:100%;border-radius:15.6%/7.2%;background:#000;padding:1.8%}
 .device .screen{width:100%;height:100%;border-radius:13.8%/6.35%;overflow:hidden;position:relative;background:#000}
 .device .screen img{width:100%;height:100%;display:block;object-fit:cover}
-.device .island{position:absolute;left:50%;top:3%;transform:translateX(-50%);width:29%;height:3.9%;border-radius:999px;background:#000}
 .device .btn{position:absolute;width:1.2%;border-radius:2px;background:linear-gradient(180deg,#5b5b60,#2a2a2e)}
 .device .btn.l1{left:-.8%;top:17%;height:4.6%}.device .btn.l2{left:-.8%;top:24%;height:7.4%}.device .btn.l3{left:-.8%;top:33%;height:7.4%}.device .btn.r{right:-.8%;top:27%;height:11%}
+.device .island{position:absolute;left:50%;top:3%;transform:translateX(-50%);width:29%;height:3.9%;border-radius:999px;background:#000}
 
-/* sections */
 section{padding:150px 0 0}
 .two{font-size:clamp(28px,3.4vw,38px);line-height:1.15;letter-spacing:-.025em;font-weight:600;max-width:780px;margin:0;text-wrap:balance}
 .two span{color:var(--muted);font-weight:500}
 .center{text-align:center;margin-left:auto;margin-right:auto}
+.lead{color:var(--muted);font-size:clamp(18px,1.6vw,20px);margin:16px 0 0;max-width:520px}
+.textlink{color:var(--muted);font-size:17px;text-decoration:underline;text-underline-offset:4px;text-decoration-color:var(--muted)}
+.textlink:hover{color:var(--fg)}
 
-/* three marks: a staircase of lifted diary rows, as on the Store cards */
+/* the doubt */
+.doubt{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+.say{display:grid}
+.say>div{grid-area:1/1;transition:opacity .4s ease,visibility .4s}
+.say .b{opacity:0;visibility:hidden}
+.doubt.done .say .a{opacity:0;visibility:hidden}
+.doubt.done .say .b{opacity:1;visibility:visible}
+.check{margin-top:28px;min-height:48px;padding:0 22px;border-radius:999px;border:1px solid var(--fg);font-weight:500}
+.again{margin-top:28px;min-height:44px}
+.stage{--u:1px;position:relative;height:calc(330*var(--u));max-width:100%}
+.food{position:absolute;left:0;right:0;top:0;text-align:center;color:var(--muted)}
+.c{position:absolute;left:50%;top:54%;font-size:calc(104*var(--u));line-height:1;font-weight:600;letter-spacing:-.04em;color:var(--muted);transform:translate(-50%,-50%) translate(calc(var(--x)*var(--u)),calc(var(--y)*var(--u))) scale(.48);opacity:.25;filter:blur(2.5px);transition:transform .75s cubic-bezier(.16,1,.3,1),opacity .4s ease,filter .4s ease,color .4s ease}
+.c.on{opacity:1;filter:none;color:var(--fg);transform:translate(-50%,-50%) translate(calc(var(--x)*var(--u)),calc(var(--y)*var(--u))) scale(.62)}
+.doubt.done .c{opacity:0;filter:blur(14px);transform:translate(-50%,-50%) translate(calc(var(--x)*2*var(--u)),calc(var(--y)*2*var(--u))) scale(.5)}
+.doubt.done .c.t{opacity:1;filter:none;color:var(--fg);transform:translate(-50%,-50%) scale(1)}
+.c i,.c small{position:absolute;opacity:0;transition:opacity .4s ease .25s}
+.c i{right:100%;top:50%;width:.2em;height:.2em;margin:-.08em .16em 0 0;border-radius:50%;background:var(--blue)}
+.c small{left:100%;bottom:.14em;margin-left:.14em;font-size:.26em;font-weight:500;letter-spacing:0;color:var(--muted)}
+.doubt.done .c.t i,.doubt.done .c.t small{opacity:1}
+
+/* the three conditions */
+.needs{display:grid;grid-template-columns:repeat(3,1fr);gap:40px;margin-top:56px}
+.needs>div{border-top:1px solid #2c2c30;padding-top:20px;min-width:0}
+h3{font-size:22px;line-height:1.2;font-weight:600;letter-spacing:-.02em;margin:0 0 8px}
+.needs p{margin:0;color:var(--muted)}
+
+/* who it's for */
+.who{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;margin-top:56px}
+.who>*{min-width:0}
+.tabs{display:flex;flex-wrap:wrap;gap:10px}
+.tabs button{min-height:44px;padding:0 18px;border-radius:999px;border:1px solid #3a3a3f;color:var(--muted);font-size:16px;font-weight:500;transition:color .2s,border-color .2s}
+.tabs button:hover{color:var(--fg)}
+.tabs button[aria-selected="true"]{border-color:var(--fg);color:var(--fg)}
+.person{margin-top:34px;min-height:118px}
+.person h3{font-size:clamp(28px,3vw,34px);letter-spacing:-.025em}
+.person p{margin:0;color:var(--muted);font-size:18px;max-width:440px}
+.all{margin:18px 0 0;color:var(--muted);font-size:15px;max-width:440px}
+.day{background:var(--card);border-radius:26px;padding:30px;box-shadow:0 0 0 1px rgba(255,255,255,.14),0 30px 80px rgba(255,255,255,.04)}
+.day .t{color:var(--muted);font-size:15px}
+.day .n{font-size:60px;line-height:1.05;font-weight:600;letter-spacing:-.04em;margin-top:2px}
+.day .n small{font-size:20px;font-weight:500;letter-spacing:0;color:var(--muted);margin-left:6px}
+.bar{height:6px;border-radius:3px;background:#2a2a2e;overflow:hidden;margin:18px 0 12px}
+.bar i{display:block;height:100%;background:var(--fg);border-radius:3px;transform-origin:left;transition:transform .55s cubic-bezier(.22,.61,.36,1)}
+.day ul{list-style:none;margin:0;padding:0}
+.day li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:15px 0;border-top:1px solid var(--rule)}
+.day li span:first-child{min-width:0}
+.day .k{display:inline-flex;align-items:center;gap:9px;font-weight:500;white-space:nowrap}
+.day .k small{color:var(--muted);font-size:14px;font-weight:400}
+.coach{display:grid;grid-template-columns:1fr 1fr;gap:64px;margin-top:88px;border-top:1px solid #2c2c30;padding-top:28px}
+.coach h3{font-size:clamp(24px,2.6vw,30px);letter-spacing:-.025em;margin:0}
+.coach p{margin:0;color:var(--muted);font-size:18px}
+
+/* marks, as on the live landing */
 .marks{margin:64px auto 0;max-width:760px;display:grid;gap:56px}
 .mark{display:grid;grid-template-columns:1fr;gap:18px}
-.mark .row{display:flex;justify-content:space-between;align-items:center;background:var(--card);border-radius:22px;padding:24px 30px;font-size:21px;box-shadow:0 0 0 1px rgba(255,255,255,.14),0 30px 80px rgba(255,255,255,.04)}
-.mark .row .k{font-weight:500;display:inline-flex;align-items:center;gap:10px;font-variant-numeric:tabular-nums}
+.mark .row{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--card);border-radius:22px;padding:24px 30px;font-size:21px;box-shadow:0 0 0 1px rgba(255,255,255,.14),0 30px 80px rgba(255,255,255,.04)}
+.mark .row .k{font-weight:500;display:inline-flex;align-items:center;gap:10px;white-space:nowrap}
 .mark .row .k small{color:var(--muted);font-size:14px;margin-left:-5px;font-weight:400}
 .mark .legend{display:flex;gap:14px;align-items:flex-start;padding-left:6px}
 .mark .legend .dot{width:16px;height:16px;margin-top:8px;flex:none}
@@ -80,29 +132,27 @@ section{padding:150px 0 0}
 .dot{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none}
 .d-blue{background:var(--blue)}.d-half{background:linear-gradient(270deg,var(--blue) 50%,transparent 50%);box-shadow:inset 0 0 0 1.6px var(--blue)}.d-ring{box-shadow:inset 0 0 0 1.6px var(--muted)}
 
-/* ways in */
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:56px 40px;margin-top:64px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:40px;margin-top:64px}
 .feat svg{width:30px;height:30px;stroke:var(--fg);fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;margin-bottom:20px}
-.feat p{margin:0;font-size:17px;line-height:1.5;color:var(--muted)}
+.feat p{margin:0;color:var(--muted)}
 .feat b{color:var(--fg);font-weight:500}
 
-/* together: every food checked until every dot is full */
 .together{display:grid;grid-template-columns:1.1fr 1fr;gap:72px;align-items:center}
+.together>*{min-width:0}
 .steps{list-style:none;margin:40px 0 0;padding:0;display:grid;gap:26px}
 .steps li{display:flex;gap:16px;align-items:flex-start}
-.steps .n{flex:none;width:14px;color:var(--muted2);font-size:15px;line-height:1.75;font-variant-numeric:tabular-nums}
+.steps .n{flex:none;width:14px;color:var(--muted);font-size:15px;line-height:1.75}
 .steps b{font-weight:500;font-size:19px}
 .steps p{margin:2px 0 0;color:var(--muted)}
-.fine{margin:36px 0 0;color:var(--muted2);font-size:14px;max-width:460px}
+.fine{margin:36px 0 0;color:var(--muted);font-size:14px;max-width:460px}
 .field{display:grid;grid-template-columns:repeat(12,1fr);gap:clamp(12px,1.8vw,18px);justify-self:center;width:100%;max-width:420px}
 .field i{aspect-ratio:1;border-radius:50%;background:var(--blue)}
 .field .h,.field .a{background:linear-gradient(270deg,var(--blue) 50%,transparent 50%);box-shadow:inset 0 0 0 1.5px var(--blue)}
 .field .a{position:relative}
 .field .a::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--blue);opacity:0}
-.field.on .a::after{animation:fill 1s ease forwards;animation-delay:calc(.6s + var(--d) * .7s)}
+.field.on .a::after{animation:fill 1s ease forwards;animation-delay:calc(.6s + var(--d)*.7s)}
 @keyframes fill{to{opacity:1}}
 
-/* faq */
 .faq{border-top:1px solid var(--rule);margin-top:48px}
 .faq details{border-bottom:1px solid var(--rule);padding:24px 0}
 .faq summary{list-style:none;cursor:pointer;font-size:20px;font-weight:500;display:flex;justify-content:space-between;gap:24px}
@@ -113,50 +163,121 @@ section{padding:150px 0 0}
 .faq p{color:var(--muted);margin:12px 0 0;max-width:640px}
 .faq a{text-decoration:underline;text-underline-offset:3px}
 
-/* close + footer */
 .close{text-align:center;padding:160px 0 0}
 .close .wordmark{font-size:32px;display:flex;justify-content:center;margin-bottom:24px}
-.close h2{font-size:clamp(32px,4.5vw,56px);letter-spacing:-.035em;font-weight:600;margin:0 0 20px}
-.textlink{color:var(--muted);font-size:17px;text-decoration:underline;text-underline-offset:4px;text-decoration-color:var(--muted2)}.textlink:hover{color:var(--fg)}
-footer{padding:120px 0 56px;color:var(--muted);font-size:14px;display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.close h2{font-size:clamp(32px,4.5vw,56px);letter-spacing:-.035em;font-weight:600;margin:0 0 20px;text-wrap:balance}
+footer{padding-top:120px;padding-bottom:56px;color:var(--muted);font-size:14px;display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
 footer .links{display:flex;gap:24px}
 footer a:hover{color:var(--fg)}
 :focus-visible{outline:2px solid var(--fg);outline-offset:3px;border-radius:6px}
-@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.field .a::after{animation:none}}
+
+@media(min-width:861px){.stage{--u:1.45px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.field .a::after{animation:none}.c,.c i,.c small,.say>div,.bar i{transition:none}}
 @media(max-width:860px){
  .wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
  nav.top .links{display:none}
  .hero{padding-top:56px}
- .phones{gap:18px;height:520px;margin-top:56px;-webkit-mask:linear-gradient(#000 72%,transparent);mask:linear-gradient(#000 72%,transparent)}
- .phones .device:nth-child(2){width:250px}.phones .device:nth-child(1),.phones .device:nth-child(3){width:210px;margin-top:56px}
- .phones .device:nth-child(3){display:none}
  section{padding-top:110px}
+ .phones{height:500px;margin-top:56px;-webkit-mask:linear-gradient(#000 76%,transparent);mask:linear-gradient(#000 76%,transparent)}
+ .phones .device:nth-child(2){width:260px}
+ .phones .device:nth-child(1),.phones .device:nth-child(3){display:none}
+ .doubt,.who,.coach,.together{grid-template-columns:1fr;gap:40px}
+ .coach{gap:12px;margin-top:64px}
+ .needs{grid-template-columns:1fr;gap:28px;margin-top:40px}
+ .grid{grid-template-columns:1fr 1fr;gap:40px 24px}
  .marks{gap:40px}.mark:nth-child(2),.mark:nth-child(3){transform:none}
  .mark .row{padding:18px 20px;font-size:18px}
- .grid,.together{grid-template-columns:1fr;gap:56px}
+ .day{padding:22px}
+ .person{min-height:0}
 }
+@media(max-width:400px){.grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-<nav class="top wrap"><a class="wordmark" href="#" aria-label="Known, home"><img src="../assets/wordmark-white.svg" alt="known"></a><div class="links"><a href="#marks">Three marks</a><a href="#ways">Ways in</a><a href="#together">Together</a><a href="#questions">Questions</a></div></nav>
+<nav class="top wrap" aria-label="Main"><a class="wordmark" href="#" aria-label="Known, home"><img src="../assets/wordmark-white.svg" alt="known"></a><div class="links"><a href="#why">Why</a><a href="#who">Who it's for</a><a href="#marks">How it works</a><a href="#together">Together</a><a href="#questions">Questions</a></div></nav>
 
 <header class="hero wrap">
- <h1>The food diary<br>you can trust.</h1>
- <p>Every number says where it comes from.</p>
+ <h1>If you count what you eat, <span>the numbers have to be true.</span></h1>
+ <p><span class="wm" role="img" aria-label="Known"></span> is a food diary for iPhone, made for people who keep track every day. Every number says where it comes from.</p>
  <a class="badge" href="#" aria-label="Download on the App Store"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.37 12.62c.02 2.33 2.05 3.1 2.07 3.11-.02.06-.32 1.1-1.06 2.19-.64.93-1.3 1.86-2.35 1.88-1.03.02-1.36-.61-2.54-.61s-1.55.59-2.52.63c-1.01.04-1.78-1.01-2.43-1.94C6.21 15.98 5.2 12.49 6.57 10.1c.68-1.19 1.9-1.94 3.22-1.96 1-.02 1.94.67 2.55.67.61 0 1.76-.83 2.96-.71.5.02 1.92.2 2.83 1.53-.07.05-1.69.99-1.67 2.95M14.52 6.84c.54-.65.9-1.56.8-2.46-.78.03-1.72.52-2.27 1.17-.5.58-.93 1.5-.82 2.39.87.07 1.75-.44 2.29-1.1"/></svg><span><small>Download on the</small><b>App Store</b></span></a>
  <div class="glow"></div>
  <div class="phones">
-  <div class="device"><div class="btn l1"></div><div class="btn l2"></div><div class="btn l3"></div><div class="btn r"></div><div class="edge"><div class="bezel"><div class="screen"><img src="../assets/voice-dark-hd.jpg" alt="Voice mode: two eggs and a slice of wholegrain toast, written as you say it"><div class="island"></div></div></div></div></div>
-  <div class="device"><div class="btn l1"></div><div class="btn l2"></div><div class="btn l3"></div><div class="btn r"></div><div class="edge"><div class="bezel"><div class="screen"><img src="../assets/today-dark-hd.jpg" alt="Today in Known: 1,472 of 2,520 kcal, with breakfast, lunch and snack rows"><div class="island"></div></div></div></div></div>
-  <div class="device"><div class="btn l1"></div><div class="btn l2"></div><div class="btn l3"></div><div class="btn r"></div><div class="edge"><div class="bezel"><div class="screen"><img src="../assets/scan-dark-hd.jpg" alt="A photo of a cheeseburger and fries being analysed"><div class="island"></div></div></div></div></div>
+  <div class="device"><div class="btn l1"></div><div class="btn l2"></div><div class="btn l3"></div><div class="btn r"></div><div class="edge"><div class="bezel"><div class="screen"><img src="../assets/voice-dark-hd.jpg" width="900" height="1955" alt="Voice mode: a meal written as you say it"><div class="island"></div></div></div></div></div>
+  <div class="device"><div class="btn l1"></div><div class="btn l2"></div><div class="btn l3"></div><div class="btn r"></div><div class="edge"><div class="bezel"><div class="screen"><img src="../assets/today-dark-hd.jpg" width="900" height="1955" alt="Today in Known: the day's meals, each value with its mark"><div class="island"></div></div></div></div></div>
+  <div class="device"><div class="btn l1"></div><div class="btn l2"></div><div class="btn l3"></div><div class="btn r"></div><div class="edge"><div class="bezel"><div class="screen"><img src="../assets/scan-dark-hd.jpg" width="899" height="1955" alt="A photo of a meal being analysed"><div class="island"></div></div></div></div></div>
  </div>
 </header>
 
 <main class="wrap">
+ <section id="why">
+  <div class="doubt" id="doubt">
+   <div class="say" aria-live="polite">
+    <div class="a">
+     <h2 class="two">You log a yogurt. <span>Which number is true?</span></h2>
+     <p class="lead">Other apps lean on old catalogs. The same yogurt reads differently in each one.</p>
+     <button class="check" id="check" type="button">Check the pack</button>
+    </div>
+    <div class="b">
+     <p class="two">The one on the label.</p>
+     <p class="lead"><span class="wm" role="img" aria-label="Known"></span> reads the values the brand declares and puts them first. Where there is no label, it tells you so.</p>
+     <button class="textlink again" id="again" type="button">See it again</button>
+    </div>
+   </div>
+   <div class="stage" aria-hidden="true">
+    <div class="food">Greek yogurt 2%</div>
+    <div class="c" style="--x:-96;--y:-92">132</div>
+    <div class="c" style="--x:92;--y:-104">171</div>
+    <div class="c" style="--x:-104;--y:84">121</div>
+    <div class="c" style="--x:98;--y:76">158</div>
+    <div class="c t" style="--x:0;--y:0"><i></i>146<small>kcal</small></div>
+   </div>
+  </div>
+
+  <div style="margin-top:130px">
+   <h2 class="two">A food diary only works <span>if three things are true.</span></h2>
+   <div class="needs">
+    <div><h3>You believe the numbers.</h3><p>If you have to wonder about every value, you stop looking at them.</p></div>
+    <div><h3>You can keep it up.</h3><p>A busy lunch or a dinner out cannot cost you five minutes of searching.</p></div>
+    <div><h3>It follows your goal.</h3><p>People count for different reasons. The number you care about belongs in front.</p></div>
+   </div>
+  </div>
+ </section>
+
+ <section id="who">
+  <h2 class="two">Made for people who already count. <span>Whatever you are counting for.</span></h2>
+  <div class="who">
+   <div>
+    <div class="tabs" role="tablist" aria-label="What leads your diary">
+     <button role="tab" id="t0" aria-selected="true" aria-controls="panel" type="button">Protein</button>
+     <button role="tab" id="t1" aria-selected="false" aria-controls="panel" tabindex="-1" type="button">Calories</button>
+     <button role="tab" id="t2" aria-selected="false" aria-controls="panel" tabindex="-1" type="button">Carbs</button>
+     <button role="tab" id="t3" aria-selected="false" aria-controls="panel" tabindex="-1" type="button">Fat</button>
+    </div>
+    <div class="person" id="panel" role="tabpanel" aria-labelledby="t0"><h3 id="pH">You train.</h3><p id="pP">Protein leads. Every meal shows what it adds, and the day shows what is still missing.</p></div>
+    <p class="all"><span class="wm" role="img" aria-label="Known"></span> counts all four, always. You choose the one you see first: in your diary, your meals and your stats.</p>
+   </div>
+   <div class="day" aria-label="An example day in the diary">
+    <div class="t" id="dT">Protein left</div>
+    <div class="n"><span id="dN">83</span><small id="dU">g</small></div>
+    <div class="bar"><i id="dB" style="transform:scaleX(.41)"></i></div>
+    <ul>
+     <li><span>Greek yogurt 2%</span><span class="k"><span class="dot d-blue"></span><span class="v">15</span> <small class="u">g</small></span></li>
+     <li><span>Oats &amp; Honey bar</span><span class="k"><span class="dot d-half"></span><span class="v">3</span> <small class="u">g</small></span></li>
+     <li><span>Banana</span><span class="k"><span class="dot d-ring"></span><span class="v">1</span> <small class="u">g</small></span></li>
+     <li><span>Chicken salad</span><span class="k"><span class="dot d-ring"></span><span class="v">38</span> <small class="u">g</small></span></li>
+    </ul>
+   </div>
+  </div>
+  <div class="coach">
+   <h3>A diary, not a coach.</h3>
+   <p>You set the goal. <span class="wm" role="img" aria-label="Known"></span> tells you where you are. No meal plans, no streaks, no advertising, no account.</p>
+  </div>
+ </section>
+
  <section id="marks">
   <h2 class="two center">Three marks. <span>You always know what you are looking at.</span></h2>
   <div class="marks">
-   <div class="mark"><div class="row"><span>Greek yogurt 0%</span><span class="k"><span class="dot d-blue"></span>97 <small>kcal</small></span></div>
+   <div class="mark"><div class="row"><span>Greek yogurt 2%</span><span class="k"><span class="dot d-blue"></span>146 <small>kcal</small></span></div>
     <div class="legend"><span class="dot d-blue"></span><div><b>From the label</b><p>The brand's own values.</p></div></div></div>
    <div class="mark"><div class="row"><span>Oats &amp; Honey bar</span><span class="k"><span class="dot d-half"></span>198 <small>kcal</small></span></div>
     <div class="legend"><span class="dot d-half"></span><div><b>To confirm</b><p>Values found in a product database, not yet checked. Match them with the pack and the dot fills.</p></div></div></div>
@@ -166,39 +287,37 @@ footer a:hover{color:var(--fg)}
  </section>
 
  <section id="ways">
-  <h2 class="two">Say what you ate. <span>Speak, write, scan or take a photo. The same meal, however the moment allows.</span></h2>
+  <h2 class="two">Say what you ate. <span>The same meal, however the moment allows.</span></h2>
   <div class="grid">
-   <div class="feat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg><p><b>Say it.</b> Two eggs and a slice of toast. Known writes the rows for you.</p></div>
-   <div class="feat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg><p><b>Or type it.</b> One line, the way you would say it. Quantities included.</p></div>
-   <div class="feat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 7v10"/><path d="M12 7v10"/><path d="M17 7v10"/></svg><p><b>Scan the pack.</b> Barcode or nutrition label. The brand's own values, first.</p></div>
-   <div class="feat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg><p><b>Take a photo.</b> Every food on the plate, recognised and counted by the most advanced AI models.</p></div>
-   <div class="feat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg><p><b>You choose what leads.</b> Calories, protein, carbs or fat in front. Everything else is still counted.</p></div>
-   <div class="feat"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M3 9h18"/><path d="M9 21V9"/></svg><p><b>Widgets.</b> Today's numbers on your Home Screen, without opening the app.</p></div>
+   <div class="feat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg><p><b>Walking.</b> Say it. Two eggs and a slice of toast, and the rows are written for you.</p></div>
+   <div class="feat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg><p><b>In a meeting.</b> Write it. One line, the way you would say it.</p></div>
+   <div class="feat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 7v10"/><path d="M12 7v10"/><path d="M17 7v10"/></svg><p><b>In the kitchen.</b> Scan the barcode or the label. The brand's own values, first.</p></div>
+   <div class="feat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg><p><b>At a restaurant.</b> Take a photo. Every food on the plate, recognised by the most advanced AI models.</p></div>
   </div>
  </section>
 
  <section id="together" class="together">
   <div>
-   <h2 class="two">Until every dot is full. <span>Most food apps lean on catalogs that are patchy and out of date. Known shows which values nobody has checked yet, so we can check them together.</span></h2>
+   <h2 class="two">Until every dot is full. <span>Reliable food data is private and hard to reach. So we are building it together.</span></h2>
    <ol class="steps">
     <li><span class="n">1</span><div><b>Half a dot.</b><p>The values come from a product database. Nobody has matched them with the pack yet.</p></div></li>
     <li><span class="n">2</span><div><b>Check it once.</b><p>Scan the label, or tap Values match. The dot fills.</p></div></li>
-    <li><span class="n">3</span><div><b>Verified for the next person.</b><p>Every check is reviewed, then the product is verified for everyone who scans it after you. A challenge we take on together, one food at a time.</p></div></li>
+    <li><span class="n">3</span><div><b>Verified for the next person.</b><p>Every check is reviewed, then the product is verified for everyone who scans it after you.</p></div></li>
    </ol>
    <p class="fine">Only the barcode, the values and your country are sent, never your diary. You can turn it off in Settings, under Help improve the catalog.</p>
   </div>
-  <div class="field" aria-hidden="true"><i class="h"></i><i class="h"></i><i class="h"></i><i class="h"></i><i class="h"></i><i class="h"></i><i class="f"></i><i class="h"></i><i class="h"></i><i class="h"></i><i class="f"></i><i class="a" style="--d:0"></i><i class="f"></i><i class="h"></i><i class="h"></i><i class="f"></i><i class="h"></i><i class="h"></i><i class="h"></i><i class="h"></i><i class="f"></i><i class="f"></i><i class="h"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="h"></i><i class="h"></i><i class="h"></i><i class="h"></i><i class="h"></i><i class="h"></i><i class="h"></i><i class="h"></i><i class="f"></i><i class="h"></i><i class="h"></i><i class="h"></i><i class="h"></i><i class="a" style="--d:1"></i><i class="f"></i><i class="a" style="--d:2"></i><i class="f"></i><i class="h"></i><i class="a" style="--d:3"></i><i class="h"></i><i class="a" style="--d:4"></i><i class="h"></i><i class="h"></i><i class="f"></i><i class="f"></i><i class="h"></i><i class="h"></i><i class="h"></i><i class="a" style="--d:5"></i><i class="f"></i><i class="h"></i><i class="h"></i><i class="f"></i><i class="f"></i><i class="a" style="--d:6"></i><i class="h"></i><i class="h"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="h"></i><i class="f"></i><i class="h"></i><i class="h"></i><i class="f"></i><i class="h"></i><i class="f"></i><i class="h"></i><i class="f"></i><i class="h"></i><i class="f"></i><i class="f"></i><i class="h"></i><i class="h"></i><i class="a" style="--d:7"></i><i class="h"></i></div>
+  <div class="field" id="field" aria-hidden="true"></div>
  </section>
 
  <section id="questions">
   <h2 class="two">Questions? <span>Answers.</span></h2>
   <div class="faq">
-   <details open><summary>What do the three marks mean?</summary><p>A full blue dot: values from the label, the brand's own numbers. Half a blue dot: to confirm, values found in a product database and not yet checked; match them with the pack and the dot fills. A grey ring: estimated by the most advanced AI models, used only where no label exists.</p></details>
+   <details open><summary>Who is Known for?</summary><p>People who already keep track of what they eat, or want to start doing it properly: for training, for a calorie budget, for a low carb diet, or for their own reasons. If you want numbers you can rely on and an app that stays out of the way, it is for you.</p></details>
+   <details><summary>Does Known tell me what to eat?</summary><p>No. Known is a diary. You set your goals, and it shows you where you are against them. It is not a meal plan and it is not medical advice.</p></details>
+   <details><summary>What do the three marks mean?</summary><p>A full blue dot: values from the label, the brand's own numbers. Half a blue dot: to confirm, values found in a product database and not yet checked; match them with the pack and the dot fills. A grey ring: estimated by the most advanced AI models, used only where no label exists.</p></details>
    <details><summary>How does a food become verified?</summary><p>Someone checks it against the pack: a label scan, or Values match when the numbers already agree. Each check is reviewed, then the product is verified for everyone. Only the barcode, the values and your country are sent, never your diary.</p></details>
-   <details><summary>Does Known count everything, or only what I choose?</summary><p>Everything. Calories, protein, carbs and fat are always counted; you choose which one leads in your diary and widgets.</p></details>
    <details><summary>Which languages does Known speak?</summary><p>English, Italian, French, German and Spanish for the app. For food, you can speak and write in any language your iPhone understands.</p></details>
-   <details><summary>Where is my diary stored?</summary><p>On your iPhone and in your iCloud. Read the <a href="../privacy-policy/">privacy policy</a> for the details.</p></details>
-   <details><summary>Is Known for iPhone only?</summary><p>Yes. Known is built for iPhone, with widgets for your Home Screen.</p></details>
+   <details><summary>Where is my diary stored?</summary><p>On your iPhone and in your iCloud. There is no Known account. Read the <a href="../privacy-policy/">privacy policy</a> for the details.</p></details>
   </div>
  </section>
 
@@ -210,10 +329,48 @@ footer a:hover{color:var(--fg)}
 </main>
 
 <footer class="wrap"><span>© 2026 Filippo Baldi · Made for iPhone</span><span class="links"><a href="../privacy-policy/">Privacy policy</a><a href="../support/">Support</a></span></footer>
+
 <script>
-// Fill the half dots once the field scrolls into view.
-const field=document.querySelector('.field');
-if('IntersectionObserver' in window){new IntersectionObserver((e,o)=>{if(e[0].isIntersecting){field.classList.add('on');o.disconnect()}},{threshold:.4}).observe(field)}else field.classList.add('on');
+const rm=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const obs=(el,fn,threshold=.35)=>new IntersectionObserver(e=>fn(e[0].isIntersecting),{threshold}).observe(el);
+
+// The doubt: the values take turns until the reader checks the pack.
+const doubt=document.getElementById('doubt'),cs=[...doubt.querySelectorAll('.c')];
+let seen=false,n=0;
+const focus=i=>cs.forEach((c,j)=>c.classList.toggle('on',j===i));
+focus(0);
+if(!rm){obs(doubt,v=>seen=v);setInterval(()=>{if(seen&&!doubt.classList.contains('done'))focus([0,3,1,2][++n%4])},850)}
+document.getElementById('check').onclick=()=>{focus(-1);doubt.classList.add('done');document.getElementById('again').focus({preventScroll:true})};
+document.getElementById('again').onclick=()=>{doubt.classList.remove('done');focus(0);document.getElementById('check').focus({preventScroll:true})};
+
+// Who it's for: the same four foods, a different number in front.
+const people=[
+ {t:'Protein left',n:'83',u:'g',b:.41,v:[15,3,1,38],h:'You train.',p:'Protein leads. Every meal shows what it adds, and the day shows what is still missing.'},
+ {t:'Calories left',n:'1,331',u:'kcal',b:.395,v:[146,198,105,420],h:'You watch your calories.',p:'Calories lead. One number for the day, and every meal measured against it.'},
+ {t:'Carbs left',n:'41',u:'g',b:.66,v:[9,29,27,14],h:'You eat low carb.',p:'Carbs lead. You see them on every line, before you decide what comes next.'},
+ {t:'Fat left',n:'34',u:'g',b:.51,v:[5,8,0,23],h:'You keep an eye on fat.',p:'Fat leads, for the days and the plans built around it.'}
+];
+const tabs=[...document.querySelectorAll('.tabs button')],$=id=>document.getElementById(id);
+const vals=[...document.querySelectorAll('.day .v')],units=[...document.querySelectorAll('.day .u')],panel=$('panel');
+function pick(i,move){
+ const d=people[i];
+ tabs.forEach((t,j)=>{t.setAttribute('aria-selected',j===i);t.tabIndex=j===i?0:-1});
+ panel.setAttribute('aria-labelledby','t'+i);
+ $('dT').textContent=d.t;$('dN').textContent=d.n;$('dU').textContent=d.u;$('dB').style.transform='scaleX('+d.b+')';
+ vals.forEach((v,j)=>v.textContent=d.v[j]);units.forEach(u=>u.textContent=d.u);
+ $('pH').textContent=d.h;$('pP').textContent=d.p;
+ if(!rm)[panel,$('dN'),...vals].forEach(el=>el.animate({opacity:[0,1]},{duration:320,easing:'ease'}));
+ if(move)tabs[i].focus();
+}
+tabs.forEach((t,i)=>{
+ t.onclick=()=>pick(i);
+ t.onkeydown=e=>{const k={ArrowRight:1,ArrowLeft:-1}[e.key];if(k){e.preventDefault();pick((i+k+4)%4,true)}};
+});
+
+// The field: the half dots fill once it scrolls into view.
+const field=$('field'),rows='hhhhhhfhhhfa'+'fhhfhhhhffhf'+'fffhhhhhhhhf'+'hhhhafafhaha'+'hhffhhhafhhf'+'fahhffffhfhh'+'fhfhfhffhhah';
+let d=0;field.innerHTML=[...rows].map(c=>c==='a'?`<i class="a" style="--d:${d++%8}"></i>`:`<i class="${c}"></i>`).join('');
+obs(field,v=>{if(v)field.classList.add('on')});
 </script>
 <script src="../assets/lenis.min.js" defer></script>
 <script src="../assets/site.js" defer></script>
