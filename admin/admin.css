@@ -197,4 +197,29 @@ summary{cursor:pointer;color:var(--muted);min-height:44px;display:flex;align-ite
 .table-wrap{overflow-x:auto}
 .tok{min-width:560px}.tok td,.tok th{padding:8px 0 8px 12px}.tok th:first-child{padding-left:0}
 
+/* Users */
+.xax.ends{justify-content:space-between}.xax.ends span{flex:none}
+.synced{color:var(--muted);font-size:13px;align-self:center}
+.seg button{white-space:nowrap}
+.src{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 8px;vertical-align:2px}
+.src.sample{color:var(--yellow);border-color:rgba(232,197,71,.5)}
+.tiles.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:960px){.tiles.four{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.fun{display:grid;gap:6px}
+.fs{display:grid;grid-template-columns:190px minmax(0,1fr) 72px;gap:12px;align-items:center;font-size:14px}
+.fs .fb{height:28px;background:var(--card2);border-radius:8px;overflow:hidden}
+.fs .fb i{display:block;height:100%;background:var(--blue);border-radius:8px}
+.fs .n{text-align:right;font-weight:600;font-size:16px}
+.fs .l small{display:block;color:var(--muted);font-size:12px}
+.fd{margin-left:202px;font-size:13px;color:var(--muted);padding:2px 0}
+.fd b{color:var(--fg);font-weight:600}
+@media (max-width:640px){.fs{grid-template-columns:minmax(0,1fr) auto}.fs .fb{grid-column:1/-1;order:3;height:20px}.fd{margin-left:0}}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px}
+@media (max-width:760px){.two{grid-template-columns:1fr;gap:0}}
+.lr{display:grid;grid-template-columns:130px minmax(0,1fr) 56px;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+.lr .kc{text-align:right}
+.costs .note{margin-top:36px;font-size:13px;color:var(--muted);max-width:72ch}
+.costs .note p{margin:0 0 8px}
+@media (max-width:420px){.top nav{gap:0}.top nav button{padding:0 8px;font-size:14px}.seg button{padding:0 10px}.tile strong{font-size:26px}}
+
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}

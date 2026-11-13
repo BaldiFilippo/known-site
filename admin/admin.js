@@ -4,6 +4,8 @@
 //
 // Corrections: on a wide screen an inbox (queues, list, detail, keyboard); on a phone one at a time, swiped.
 // Catalog: read-only, the products the app bundles with the approved corrections laid over them.
+// Users: Apple's analytics (copied by the asc-sync function); Known itself sends none. Sessions and active devices are
+// a sample (people who share analytics with developers) and are marked so.
 // Costs: only what the server measures. The AI per paying subscriber, the subscribers, who is near a budget, then the
 // days, where the money goes and, last, the test builds. Revenue is App Store Connect's, not shown here.
 "use strict";
@@ -169,10 +171,11 @@ function show() {
   $("corrections").hidden = !signedIn || tab !== "corrections";
   $("catalog").hidden = !signedIn || tab !== "catalog";
   $("costs").hidden = !signedIn || tab !== "costs";
+  $("users").hidden = !signedIn || tab !== "users";
   if (signedIn && !loaded) loadCorrections();
 }
 
-const tabs = [$("tab-corrections"), $("tab-catalog"), $("tab-costs")];
+const tabs = [$("tab-corrections"), $("tab-catalog"), $("tab-costs"), $("tab-users")];
 function selectTab(button) {
   tab = button.id.slice(4);
   for (const t of tabs) {
@@ -183,6 +186,7 @@ function selectTab(button) {
   show();
   if (tab === "costs" && !costsLoaded) loadCosts();
   if (tab === "catalog" && !catalog) loadCatalog();
+  if (tab === "users" && !usersData) loadUsers();
 }
 for (const t of tabs) {
   t.addEventListener("click", () => selectTab(t));
@@ -952,6 +956,188 @@ function renderCosts() {
 }
 
 /** A round step for the y axis: about 3 lines, in 1, 2 or 5 times a power of ten (cents). */
+// ---------- Users ----------
+
+let usersData = null;
+let udays = 30;
+const pct = (a, b) => (b ? `${a / b >= 0.1 ? Math.round((a / b) * 100) : ((a / b) * 100).toFixed(1)}%` : "—");
+const countryName = (() => {
+  let names = null;
+  try { names = new Intl.DisplayNames(["en"], { type: "region" }); } catch { /* old browser */ }
+  return (code) => { try { return (names && /^[A-Z]{2}$/.test(code) && names.of(code)) || code; } catch { return code; } };
+})();
+
+for (const b of document.querySelectorAll("#users [data-udays]")) {
+  b.addEventListener("click", () => {
+    udays = Number(b.dataset.udays);
+    for (const o of document.querySelectorAll("#users [data-udays]")) o.setAttribute("aria-pressed", o === b);
+    loadUsers();
+  });
+}
+
+async function loadUsers() {
+  put($("users-body"), el("p", { class: "empty" }, "Loading…"));
+  try {
+    usersData = await api(`users?days=${udays}`);
+    renderUsers();
+  } catch (err) {
+    usersData = null;
+    failed($("users-body"), err, loadUsers);
+  }
+}
+
+function renderUsers() {
+  const rows = usersData.rows ?? [];
+  const subs = usersData.subscriptions ?? { paying: 0, trials: 0 };
+  const synced = usersData.synced;
+  const dayOf = (offset) => new Date(Date.now() - offset * 86_400_000).toISOString().slice(0, 10);
+  const from = dayOf(udays - 1), prevFrom = dayOf(2 * udays - 1);
+  const cur = rows.filter((r) => r.day >= from), prev = rows.filter((r) => r.day >= prevFrom && r.day < from);
+  const total = (list, metric, dim = "") => list.reduce((n, r) => n + (r.metric === metric && r.dim === dim ? Number(r.value) : 0), 0);
+  const through = rows.reduce((m, r) => (r.day > m ? r.day : m), "");
+  const period = udays === 365 ? "in the last year" : udays === 7 ? "this week" : `in ${udays} days`;
+
+  put($("users-synced"), through
+    ? `Apple's data up to ${shortDay(through)}${synced?.copied_at ? ` · copied ${new Date(synced.copied_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : ""}`
+    : "");
+
+  if (!rows.length) {
+    put($("users-body"),
+      el("h1", {}, `${int(subs.paying)} paying for Pro now. `, el("em", {}, `${int(subs.trials)} ${subs.trials === 1 ? "trial" : "trials"} running.`)),
+      el("p", { class: "empty" }, synced
+        ? `Apple has no numbers for Known ${period} yet.`
+        : "No numbers from Apple yet. Its reports start a day or two after the first downloads and are copied here every 3 hours."));
+    return;
+  }
+
+  const n = (metric, list = cur) => total(list, metric);
+  const downloads = n("downloads"), prevDownloads = n("downloads", prev);
+  const trials = n("sub_trial_start"), converted = n("sub_trial_converted"), direct = n("sub_subscribe");
+  const steps = [
+    { label: "Saw Known on the Store", note: "impressions, unique devices a day", value: n("impressions"), verb: "opened the page" },
+    { label: "Opened the product page", value: n("page_views"), verb: "downloaded" },
+    { label: "Downloaded", note: "first downloads only", value: downloads, verb: "started a trial" },
+    { label: "Started a trial", value: trials, verb: "became Pro (trials ending in the period)" },
+    { label: "Became Pro", note: "from a trial or straight", value: converted + direct },
+  ];
+  const top = Math.max(...steps.map((s) => s.value), 1);
+  const ratios = steps.slice(0, -1).map((s, i) => ({ from: s, to: steps[i + 1], r: s.value ? steps[i + 1].value / s.value : null }));
+  const weakest = ratios.filter((x) => x.r !== null && x.from.value >= 10).sort((a, b) => a.r - b.r)[0];
+
+  const h1 = el("h1", {}, `${int(downloads)} ${downloads === 1 ? "person" : "people"} downloaded Known ${period}. `,
+    el("em", {}, `${int(trials)} started a trial, ${int(subs.paying)} pay for Pro now.`));
+  const lead = steps[0].value
+    ? el("p", { class: "lead" }, "From the Store to Pro, ", el("b", {}, pct(converted + direct, steps[0].value)),
+      " of the people who saw Known paid for it.",
+      weakest ? [" The weakest step is ", el("b", {}, `${weakest.from.label.toLowerCase()} → ${weakest.to.label.toLowerCase()}`), "."] : null)
+    : null;
+
+  const change = prevDownloads ? Math.round(((downloads - prevDownloads) / prevDownloads) * 100) : null;
+  const activeDays = new Set(cur.filter((r) => r.metric === "active_devices").map((r) => r.day)).size;
+  const activeAvg = activeDays ? Math.round(n("active_devices") / activeDays) : null;
+  const deletions = n("deletions");
+  const tiles = el("div", { class: "tiles four" },
+    tile("Downloads", int(downloads),
+      `${change === null ? "nothing to compare with yet" : `${change >= 0 ? "+" : ""}${change}% on the ${udays === 365 ? "year" : `${udays} days`} before`} · ${int(n("redownloads"))} re-downloads apart`),
+    sampleTile("Active devices a day", activeAvg === null ? "—" : int(activeAvg), "average, among people who share analytics"),
+    tile("Paying Pro", int(subs.paying), `now · ${int(subs.trials)} in trial`),
+    tile("Uninstalls", int(deletions), downloads ? `${pct(deletions, downloads)} of downloads` : `${period}`));
+
+  const funnel = el("div", { class: "fun" }, steps.map((s, i) => {
+    const bar = el("i"); bar.style.width = `${(s.value / top) * 100}%`;
+    return [
+      el("div", { class: "fs" }, el("span", { class: "l" }, s.label, s.note ? el("small", {}, s.note) : null),
+        el("span", { class: "fb" }, bar), el("span", { class: "n" }, int(s.value))),
+      i < ratios.length ? el("div", { class: "fd" }, el("b", {}, ratios[i].r === null ? "—" : pct(ratios[i].to.value, s.value)), ` ${s.verb}`) : null,
+    ];
+  }));
+
+  const series = (metric) => {
+    const out = [];
+    for (let i = udays - 1; i >= 0; i--) { const day = dayOf(i); out.push({ day, v: total(cur.filter((r) => r.day === day), metric) }); }
+    return out;
+  };
+  const dlSeries = series("downloads");
+  const dlDetail = (s) => `${shortDay(s.day)}: ${int(s.v)} ${s.v === 1 ? "download" : "downloads"} · ${int(total(cur.filter((r) => r.day === s.day), "redownloads"))} re-downloads · ${int(total(cur.filter((r) => r.day === s.day), "sub_trial_start"))} trials`;
+  const actSeries = series("active_devices");
+  const sessions = n("sessions");
+
+  const shareRows = (metric, limit, name, asCount) => {
+    const by = new Map();
+    for (const r of cur) if (r.metric === metric) by.set(r.dim, (by.get(r.dim) ?? 0) + Number(r.value));
+    const list = [...by.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit);
+    const sum = [...by.values()].reduce((a, b) => a + b, 0), most = list[0]?.[1] ?? 0;
+    if (!list.length) return el("p", { class: "empty" }, "No downloads in the period.");
+    return list.map(([dim, v]) => {
+      const bar = el("i"); bar.style.width = `${most ? (v / most) * 100 : 0}%`;
+      return el("div", { class: "lr" }, el("span", {}, name(dim)), el("span", { class: "kb" }, bar), el("span", { class: "kc" }, asCount ? int(v) : pct(v, sum)));
+    });
+  };
+
+  put($("users-body"),
+    h1, lead, tiles,
+    el("h2", {}, "From the Store to Pro"),
+    el("p", { class: "sub" }, "Each step out of the one above."),
+    funnel,
+    el("h2", {}, "Downloads a day"),
+    el("p", { class: "sub" }, "First downloads. Tap a day for its numbers."),
+    barChart(dlSeries, dlDetail),
+    el("h2", {}, "Active devices a day ", el("span", { class: "src sample" }, "sample")),
+    el("p", { class: "sub" }, "Devices that opened Known that day, among people who share analytics with developers."),
+    barChart(actSeries, (s) => `${shortDay(s.day)}: ${int(s.v)} active ${s.v === 1 ? "device" : "devices"}`,
+      activeDays && n("active_devices") ? `${(sessions / n("active_devices")).toFixed(1)} sessions per active device a day, on average.` : null),
+    el("div", { class: "two" },
+      el("section", {}, el("h2", {}, "Where downloads come from"), el("p", { class: "sub" }, "Share of first downloads."),
+        shareRows("downloads_source", 6, (d) => d, false)),
+      el("section", {}, el("h2", {}, "Countries"), el("p", { class: "sub" }, "First downloads, top 5."),
+        shareRows("downloads_country", 5, countryName, true))),
+    el("h2", {}, "Subscriptions"),
+    el("p", { class: "sub" }, "From Apple's subscription events: all of them, not a sample."),
+    el("div", { class: "tiles four" },
+      tile("Trials started", int(trials), downloads ? `${pct(trials, downloads)} of downloads` : period),
+      tile("Trial → Pro", trials ? pct(converted, trials) : "—", `${int(converted)} converted ${period}, out of ${int(trials)} trials started`),
+      tile("Cancelled", int(n("sub_cancel")), `${period} · ${int(direct)} subscribed without a trial`),
+      tile("Refunds", int(n("sub_refund")), period)),
+    el("div", { class: "note" },
+      el("p", {}, el("b", {}, "Where the numbers come from. "),
+        "Store, downloads, countries and subscriptions: App Store Connect, complete, 1–2 days late. Numbers marked ",
+        el("span", { class: "src sample" }, "sample"),
+        " count only people who chose to share analytics with developers in their iPhone settings, so they are lower than the real total. Apple hides very small counts. Pro and trials “now”: Known's own server."),
+      el("p", {}, "Known itself sends no analytics: the privacy policy stays as it is.")));
+}
+
+function sampleTile(title, value, text) {
+  return el("div", { class: "tile" }, el("p", {}, title, " ", el("span", { class: "src sample" }, "sample")), el("strong", {}, value), el("small", {}, text));
+}
+
+function shortDay(day) {
+  const d = new Date(`${day}T12:00:00Z`);
+  return `${d.getUTCDate()} ${d.toLocaleString("en-GB", { month: "short", timeZone: "UTC" })}`;
+}
+
+/** A bar a day; tapping, hovering or focusing a day says its numbers. */
+function barChart(series, say, foot = null) {
+  const max = Math.max(...series.map((s) => s.v), 0);
+  const step = niceStep(max), top = Math.max(step * Math.ceil(max / step), step);
+  const detail = el("p", { class: "day-detail", "aria-live": "polite" }, foot ?? "Tap a bar for the day.");
+  const gap = series.length <= 14 ? "10px" : series.length <= 31 ? "3px" : "1px";
+  const plot = el("div", { class: "plot" });
+  plot.style.setProperty("--gap", gap);
+  for (let t = step; t <= top; t += step) { const g = el("i", { class: "grid" }); g.style.bottom = `${(t / top) * 100}%`; plot.append(g); }
+  for (const s of series) {
+    const stk = el("span", { class: "stk" }, el("i", { class: "real" }));
+    stk.firstChild.style.flex = "1";
+    stk.style.height = `${(s.v / top) * 100}%`;
+    if (s.v) stk.style.minHeight = "2px";
+    const tell = () => { detail.textContent = say(s); };
+    plot.append(el("button", { type: "button", class: "col", "aria-label": say(s), onclick: tell, onfocus: tell, onmouseenter: tell }, stk));
+  }
+  const yax = el("div", { class: "yax" });
+  for (let t = 0; t <= top; t += step) { const s = el("span", {}, int(t)); s.style.bottom = `${(t / top) * 100}%`; yax.append(s); }
+  const xax = el("div", { class: "xax ends" }, [0, Math.floor((series.length - 1) / 2), series.length - 1].map((i) => el("span", {}, shortDay(series[i].day))));
+  return [el("div", { class: "chart" }, yax, plot), xax, detail];
+}
+
 function niceStep(max) {
   if (max <= 0) return 1;
   const raw = max / 3, p = 10 ** Math.floor(Math.log10(raw));
