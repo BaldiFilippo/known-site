@@ -236,6 +236,7 @@ function countrySeg() {
       country = c;
       store.set(COUNTRY_KEY, c);
       selected = null; catSelected = null; catOpen = false; catShowReport = false; mobQueue = null;
+      if (queue !== "done" && !inQueue(queue).length) queue = firstQueue();
       render();
       if (catalog) renderCatalog();
     } }, name)));
@@ -310,6 +311,8 @@ async function lookUpNames(gtins) {
 const nameOf = (r) => r.name ? [r.name, r.brand] : names[r.gtin] ?? [`EAN ${r.gtin}`, null];
 
 const open = () => pending.filter((r) => !r.decided && inCountry(r));
+/** The queue to start from: what doesn't add up, else what needs a look, else the quick confirmations. */
+const firstQueue = () => ["bad", "look", "easy"].find((id) => inQueue(id).length) ?? "look";
 const inQueue = (id) => id === "done" ? decidedRows() : open().filter(QUEUES.find((q) => q.id === id).test);
 function decidedRows() {
   const local = pending.filter((r) => r.decided).map((r) => ({ ...r, review: r.decided }));
@@ -334,7 +337,7 @@ async function loadCorrections() {
     for (const r of rows) devices.set(r.gtin, (devices.get(r.gtin) ?? new Set()).add(r.reporter));
     pending = rows.map((r) => ({ ...r, devices: devices.get(r.gtin).size }))
       .sort((a, b) => b.devices - a.devices || String(a.received_on).localeCompare(String(b.received_on)) || a.id - b.id);
-    if (!inQueue(queue).length) queue = inQueue("bad").length ? "bad" : "look";
+    if (!inQueue(queue).length) queue = firstQueue();
     render();
   } catch (err) {
     loaded = false;
