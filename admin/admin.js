@@ -4,6 +4,8 @@
 //
 // Corrections: on a wide screen an inbox (queues, list, detail, keyboard); on a phone one at a time, swiped.
 // Catalog: read-only, the products the app bundles with the approved corrections laid over them.
+// Both are seen one country at a time (Italy, United States, or all): a product's country is the catalog row's, a
+// correction's the country it was made in; rows without one are Italian (the first catalog and its corrections).
 // Users: Apple's analytics (copied by the asc-sync function); Known itself sends none. Sessions and active devices are
 // a sample (people who share analytics with developers) and are marked so.
 // Costs: only what the server measures. The AI per paying subscriber, the subscribers, who is near a budget, then the
@@ -16,6 +18,7 @@ const API = `${SUPABASE}/functions/v1/admin`;
 const SESSION_KEY = "known-admin-session";
 const EMAIL_KEY = "known-admin-email";
 const NAMES_KEY = "known-admin-names";
+const COUNTRY_KEY = "known-admin-country";
 
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -215,6 +218,29 @@ function toast(text, undo) {
   toastTimer = setTimeout(() => { t.hidden = true; }, 5000);
 }
 
+// ---------- Country ----------
+
+const COUNTRIES = [["IT", "Italy"], ["US", "US"], ["all", "All"]];
+const COUNTRY_NAME = { IT: "Italy", US: "United States" };
+let country = COUNTRIES.some(([c]) => c === store.get(COUNTRY_KEY)) ? store.get(COUNTRY_KEY) : "IT";
+const countryOf = (x) => x.country ?? "IT";
+/** Calories from the values: US and Canadian labels count the fiber in the carbs, so it comes out of them first. */
+const FIBER_IN_CARBS = new Set(["US", "CA"]);
+const energyOf = (v, where) => 4 * ((v.carbs ?? 0) - (FIBER_IN_CARBS.has(where) ? v.fibre ?? 0 : 0)) + 4 * (v.protein ?? 0) + 9 * (v.fat ?? 0) + 2 * (v.fibre ?? 0);
+const inCountry = (x) => country === "all" || countryOf(x) === country;
+
+/** Italy · United States · All, shared by Corrections and Catalog (kept in this browser). */
+function countrySeg() {
+  return el("div", { class: "seg cseg", role: "group", "aria-label": "Country" }, COUNTRIES.map(([c, name]) =>
+    el("button", { type: "button", "aria-pressed": country === c ? "true" : "false", onclick: () => {
+      country = c;
+      store.set(COUNTRY_KEY, c);
+      selected = null; catSelected = null; catOpen = false; catShowReport = false; mobQueue = null;
+      render();
+      if (catalog) renderCatalog();
+    } }, name)));
+}
+
 // ---------- Corrections: data ----------
 
 const KIND = { confirm: "Values match", label: "Label photo", manual: "Typed by hand" };
@@ -239,7 +265,7 @@ function facts(r) {
   const v = r.values ?? {}, b = r.before ?? {};
   const changed = r.kind === "confirm" ? [] :
     NUTRIENTS.map(([, k]) => k).filter((k) => v[k] != null && b[k] != null && Math.abs(Number(v[k]) - Number(b[k])) > 0.05);
-  const fromMacros = 4 * (v.carbs ?? 0) + 4 * (v.protein ?? 0) + 9 * (v.fat ?? 0) + 2 * (v.fibre ?? 0);
+  const fromMacros = energyOf(v, countryOf(r));
   const kcal = Number(v.kcal ?? 0);
   const addsUp = kcal < 20 ? Math.abs(fromMacros - kcal) < 15 : Math.abs(fromMacros - kcal) / kcal <= 0.15;
   // The value most to blame when it doesn't: the one whose own calories differ most from the gap.
@@ -283,11 +309,11 @@ async function lookUpNames(gtins) {
 }
 const nameOf = (r) => r.name ? [r.name, r.brand] : names[r.gtin] ?? [`EAN ${r.gtin}`, null];
 
-const open = () => pending.filter((r) => !r.decided);
+const open = () => pending.filter((r) => !r.decided && inCountry(r));
 const inQueue = (id) => id === "done" ? decidedRows() : open().filter(QUEUES.find((q) => q.id === id).test);
 function decidedRows() {
   const local = pending.filter((r) => r.decided).map((r) => ({ ...r, review: r.decided }));
-  return [...local, ...decided.filter((d) => !pending.some((p) => p.id === d.id))];
+  return [...local, ...decided.filter((d) => !pending.some((p) => p.id === d.id))].filter(inCountry);
 }
 function visible() {
   const q = query.trim().toLowerCase();
@@ -402,7 +428,7 @@ function body(r) {
 // ---------- Corrections: desktop inbox ----------
 
 function render() {
-  const n = open().length;
+  const n = pending.filter((r) => !r.decided).length; // every country: nothing waits unseen
   $("tab-count").textContent = n ? String(n) : "";
   renderQueues();
   renderList();
@@ -421,7 +447,7 @@ function renderQueues() {
     type: "button", class: "q", "aria-current": queue === id ? "true" : "false",
     onclick: () => { queue = id; selected = null; render(); },
   }, el("span", {}, title), el("span", { class: `badge ${count && badge ? badge : ""}` }, String(count)));
-  put($("queues"), 
+  put($("queues"), countrySeg(),
     ...QUEUES.map((q) => button(q.id, q.title, inQueue(q.id).length, q.badge)),
     el("h4", {}, "Decided"),
     button("done", "Last 7 days", doneRows.length),
@@ -516,7 +542,7 @@ function renderMobile() {
   const step = (title, count, badge, text, ...buttons) => count ? el("section", { class: "step" },
     el("h3", {}, el("span", {}, title), el("span", { class: `badge ${badge}` }, String(count))), el("p", {}, text), el("div", { class: "row" }, buttons)) : null;
   const n = open().length;
-  put(mob, 
+  put(mob, countrySeg(),
     el("h1", {}, n ? `${n} to review` : "All done"),
     el("p", { class: "lead" }, n ? "Easiest first. Swipe right to approve, left to reject." : "Nothing waiting for review."),
     step("Values don't add up", bad.length, "r", "Calories don't match carbs, protein and fat: probably a typo.",
@@ -622,6 +648,10 @@ let catFilter = "all";
 let catQuery = "";
 let catSelected = null;      // _key
 let catOpen = false;         // phone: the detail is open over the list
+let catShowReport = false;   // the country's report in the detail instead of a product
+let catReports = {};         // { US: { report, audit } }: 10-minute links from the service
+const catReport = {};        // country → its report (coverage, why products stayed out)
+const catAudit = {};         // country → { gtin: where the values come from and who confirmed them }
 const CAT_LIMIT = 200;
 
 const key14 = (gtin) => String(gtin).padStart(14, "0");
@@ -645,12 +675,14 @@ async function loadCatalog() {
   put($("cat-list"), el("p", { class: "empty" }, "Loading the catalog…"));
   put($("cat-detail"));
   try {
-    const { url, overrides } = await api("catalog");
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`The catalog file answered ${res.status}.`);
-    let bytes = new Uint8Array(await res.arrayBuffer());
-    if (bytes[0] === 0x1f && bytes[1] === 0x8b) bytes = new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer());
-    const file = JSON.parse(new TextDecoder().decode(bytes));
+    const { url, overrides, reports } = await api("catalog");
+    catReports = reports ?? {};
+    const file = await fetchJSON(url, "The catalog file");
+    // The reports are extras: one that can't be read leaves the catalog as it is.
+    await Promise.all(Object.entries(catReports).map(async ([c, links]) => {
+      if (links.report) catReport[c] = await fetchJSON(links.report, "The report").catch(() => null);
+      if (links.audit) catAudit[c] = await fetchJSON(links.audit, "The audit").catch(() => null);
+    }));
     const byKey = new Map();
     for (const p of file.products ?? []) byKey.set(key14(p.gtin), { ...p, _key: key14(p.gtin) });
     for (const o of overrides ?? []) {
@@ -674,6 +706,15 @@ async function loadCatalog() {
   }
 }
 
+/** A JSON file from a short-lived link, gzipped or not. */
+async function fetchJSON(url, what) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${what} answered ${res.status}.`);
+  let bytes = new Uint8Array(await res.arrayBuffer());
+  if (bytes[0] === 0x1f && bytes[1] === 0x8b) bytes = new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer());
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+
 /** The values the app uses (per 100): the catalog's, or the approved correction's when it has values. */
 function catValues(p) {
   const x = p.x ?? {};
@@ -686,7 +727,7 @@ function catFacts(p) {
   if (p._facts) return p._facts;
   const { base, now } = catValues(p);
   const v = now ?? base;
-  const fromMacros = 4 * (v.carbs ?? 0) + 4 * (v.protein ?? 0) + 9 * (v.fat ?? 0) + 2 * (v.fibre ?? 0);
+  const fromMacros = energyOf(v, countryOf(p));
   const kcal = Number(v.kcal ?? 0);
   const addsUp = kcal < 20 ? Math.abs(fromMacros - kcal) < 15 : Math.abs(fromMacros - kcal) / kcal <= 0.15;
   return (p._facts = { addsUp, fromMacros: Math.round(fromMacros), kcal });
@@ -695,7 +736,7 @@ function catFacts(p) {
 function catVisible() {
   const f = CAT_FILTERS.find((x) => x.id === catFilter);
   const words = catQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  return catalog.filter((p) => f.test(p) && words.every((w) => p._hay.includes(w)));
+  return catalog.filter((p) => inCountry(p) && f.test(p) && words.every((w) => p._hay.includes(w)));
 }
 
 function catChips(p) {
@@ -709,14 +750,59 @@ function catChips(p) {
 function renderCatalog() {
   if (!catalog) return;
   const filters = $("cat-filters");
-  put(filters, ...CAT_FILTERS.map((f) => {
-    const n = catalog.filter(f.test).length;
-    return el("button", { type: "button", class: "q", "aria-current": catFilter === f.id ? "true" : "false",
-      onclick: () => { catFilter = f.id; catSelected = null; catOpen = false; renderCatalog(); } },
+  const report = catReport[country];
+  put(filters, countrySeg(), ...CAT_FILTERS.map((f) => {
+    const n = catalog.filter((p) => inCountry(p) && f.test(p)).length;
+    return el("button", { type: "button", class: "q", "aria-current": !catShowReport && catFilter === f.id ? "true" : "false",
+      onclick: () => { catFilter = f.id; catSelected = null; catOpen = false; catShowReport = false; renderCatalog(); } },
     el("span", {}, f.title), el("span", { class: `badge ${n && f.badge ? f.badge : ""}` }, int(n)));
-  }), el("p", { class: "progress" }, `Catalog of ${catalog.version?.slice(0, 10) ?? "–"}. Read-only: ask Claude for changes.`));
+  }), report ? el("button", { type: "button", class: "q", "aria-current": catShowReport ? "true" : "false",
+    onclick: () => { catShowReport = true; catOpen = true; renderCatalog(); if (!wide.matches) scrollTo({ top: 0 }); } },
+  el("span", {}, "Coverage report"), el("span", { class: "badge" }, `${percent(report.scans.in, report.scans.total)}`)) : null,
+  catSummary(),
+  el("p", { class: "progress" }, `Catalog of ${catalog.version?.slice(0, 10) ?? "–"}. Read-only: ask Claude for changes.`));
   renderCatList();
   renderCatDetail();
+}
+
+const percent = (part, whole) => whole ? `${(Math.round(1000 * part / whole) / 10).toLocaleString("en-US")}%` : "–";
+
+/** The country's numbers: products, full dot (verified) and half dot (to confirm), the last change. */
+function catSummary() {
+  const rows = catalog.filter(inCountry);
+  const full = rows.filter((p) => p.state === "verified").length;
+  const last = rows.reduce((m, p) => (p.cv && p.cv > m ? p.cv : m), "");
+  const line = (k, v) => el("div", {}, el("span", {}, k), v);
+  const per = country === "all"
+    ? Object.entries(COUNTRY_NAME).map(([c, name]) => line(name, int(catalog.filter((p) => countryOf(p) === c).length)))
+    : [];
+  return el("div", { class: "csum" },
+    line("Products", int(rows.length)), line("Full dot", int(full)), line("Half dot", int(rows.length - full)),
+    line("Last change", last ? last.slice(0, 10) : "–"), ...per);
+}
+
+/** The country's report: how much of what people scan is in, where the values come from, why others stay out. */
+function renderCatReport() {
+  const r = catReport[country];
+  if (!r) { put($("cat-detail")); return; }
+  const name = COUNTRY_NAME[country] ?? country;
+  put($("cat-detail"),
+    wide.matches ? null : el("button", { type: "button", class: "link back", onclick: () => { catOpen = false; catShowReport = false; renderCatalog(); } }, "‹ Products"),
+    el("div", { class: "pt" }, el("h2", {}, `${name}: coverage`),
+      el("p", {}, `Built ${String(r.built ?? "").slice(0, 10)} · ${int(r.products)} products, all with the full dot`)),
+    el("div", { class: "tiles rep" },
+      el("div", { class: "tile" }, el("p", {}, "Share of scans"), el("strong", {}, percent(r.scans.in, r.scans.total)),
+        el("small", {}, `${int(r.scans.in)} of ${int(r.scans.total)}`)),
+      el("div", { class: "tile" }, el("p", {}, "Products in"), el("strong", {}, int(r.products)))),
+    r.scans.note ? el("p", { class: "muted small" }, r.scans.note) : null,
+    el("h3", {}, "Where the values come from"),
+    el("table", {}, el("thead", {}, el("tr", {}, el("th", {}, "Values from"), el("th", {}, "Confirmed by"), el("th", {}, "Products"))),
+      el("tbody", {}, (r.in_by ?? []).map((x) => el("tr", {}, el("th", { scope: "row" }, x.from),
+        el("td", { class: "l" }, x.confirmed_by.join(", ")), el("td", {}, int(x.products)))))),
+    el("h3", {}, "Left out, and why"),
+    el("table", {}, el("thead", {}, el("tr", {}, el("th", {}, "Why"), el("th", {}, "Source"), el("th", {}, "Products"), el("th", {}, "Scans"))),
+      el("tbody", {}, (r.left_out ?? []).map((x) => el("tr", {}, el("th", { scope: "row" }, x.why),
+        el("td", { class: "l" }, x.source), el("td", {}, int(x.products)), el("td", {}, int(x.scans)))))));
 }
 
 function renderCatList() {
@@ -727,13 +813,14 @@ function renderCatList() {
   const shownRows = rows.slice(0, CAT_LIMIT);
   put($("cat-list"), el("p", { class: "count" }, rows.length > CAT_LIMIT ? `First ${CAT_LIMIT} of ${int(rows.length)}: search to narrow them.` : `${int(rows.length)} products`),
     ...shownRows.map((p) => el("button", { type: "button", class: "it", "aria-current": p._key === catSelected ? "true" : "false",
-      onclick: () => { catSelected = p._key; catOpen = true; renderCatList(); renderCatDetail(); if (!wide.matches) scrollTo({ top: 0 }); } },
+      onclick: () => { catSelected = p._key; catOpen = true; if (catShowReport) { catShowReport = false; renderCatalog(); } else { renderCatList(); renderCatDetail(); } if (!wide.matches) scrollTo({ top: 0 }); } },
     el("b", {}, p.name), el("span", { class: "br" }, [p.brand, `EAN ${ean(p.gtin)}`].filter(Boolean).join(" · ")),
     el("span", { class: "m" }, el("span", { class: "chips" }, catChips(p))))));
   if (wide.matches) $("cat-list").querySelector("[aria-current=true]")?.scrollIntoView({ block: "nearest" });
 }
 
 function renderCatDetail() {
+  if (catShowReport) return renderCatReport();
   const p = catalog?.find((x) => x._key === catSelected);
   if (!p) { put($("cat-detail")); return; }
   const { base, now } = catValues(p);
@@ -761,6 +848,13 @@ function renderCatDetail() {
     ["Maker", p.maker], ["Line", [p.line, p.variant].filter(Boolean).join(" · ") || null], ["Prepared", p.prep === "prepared" ? "Values as prepared" : null],
     ["Changed in", p.cv?.slice(0, 10)],
   ].filter((x) => x && x[1]);
+  // Where the values come from and who confirmed them (the country's audit, private to this page).
+  const audit = catAudit[countryOf(p)]?.[p._key];
+  const linked = (text, href) => href ? el("a", { href, target: "_blank", rel: "noopener noreferrer" }, `${text} ↗`) : text;
+  if (audit) {
+    facts.push(["Values from", linked(audit.from, audit.link)]);
+    for (const [i, c] of (audit.confirmed_by ?? []).entries()) facts.push([i ? "" : "Confirmed by", linked(c.by, c.link)]);
+  }
   put($("cat-detail"),
     wide.matches ? null : el("button", { type: "button", class: "link back", onclick: () => { catOpen = false; renderCatList(); } }, "‹ Products"),
     el("div", { class: "pt" }, el("span", { class: "chips" }, catChips(p)), el("h2", {}, p.name.replace(/ (\S+)$/, "\u00a0$1")),
