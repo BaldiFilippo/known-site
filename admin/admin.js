@@ -671,8 +671,13 @@ const CAT_FILTERS = [
 ];
 const SRC = { producer: "Producer's site", label: "Pack label", store: "Shop's own brand", shop: "A shop's site" };
 
-/** A code of the US and Canada (GTIN-13 prefix 001–019, 030–039, 060–139): the US file has only these. */
-const usCode = (k) => { const n = Number(k.slice(1, 4)); return k[0] === "0" && ((n >= 1 && n <= 19) || (n >= 30 && n <= 39) || (n >= 60 && n <= 139)); };
+/** A code of the US and Canada, as the app tells it (Catalog.isUSCode): GTIN-13 prefix 000–019, 030–039, 060–139; an
+ * 8-digit code when it starts with 0 or 1. The US file has only these. */
+const usCode = (k) => {
+  if (k.startsWith("000000")) return k[6] === "0" || k[6] === "1";
+  const n = Number(k.slice(1, 4));
+  return k[0] === "0" && (n <= 19 || (n >= 30 && n <= 39) || (n >= 60 && n <= 139));
+};
 
 /** The catalog's files, one per country (gzip, from short-lived links), plus the approved corrections, joined by GTIN. */
 async function loadCatalog() {
