@@ -248,7 +248,9 @@ function facts(r) {
     const gap = fromMacros - kcal, per = { carbs: 4, protein: 4, fat: 9 };
     culprit = Object.keys(per).filter((k) => v[k]).sort((a, c) => Math.abs(gap - per[a] * v[a]) - Math.abs(gap - per[c] * v[c]))[0] ?? null;
   }
-  const easy = r.kind === "confirm" && !r.portion && addsUp;
+  // Quick only for a product the catalog has: approving changes no value. A confirmation of one it lacks adds the
+  // row's own values for everyone, so it is looked at like any new values, never approved in a batch.
+  const easy = r.kind === "confirm" && !!r.catalog_state && !r.portion && addsUp;
   return (r._facts = { changed, fromMacros: Math.round(fromMacros), addsUp, culprit, easy });
 }
 
@@ -355,6 +357,7 @@ function chipOf(r) {
   const f = facts(r);
   if (!f.addsUp) return el("span", { class: "chip r" }, "Doesn't add up");
   if (r.portion) return el("span", { class: "chip y" }, "New portion");
+  if (r.kind === "confirm" && !r.catalog_state) return el("span", { class: "chip y" }, "New product");
   if (r.kind === "confirm") return el("span", { class: "chip ok" }, "Confirmed");
   return f.changed.length ? el("span", { class: "chip y" }, `${f.changed.length} changed`) : el("span", { class: "chip" }, "Same values");
 }
@@ -524,7 +527,7 @@ function renderMobile() {
     step("Quick confirmations", easy.length, "", "Someone checked the pack and the values were right. Approving makes them verified.",
       el("button", { type: "button", class: "approve", onclick: approveAllEasy }, `Approve all ${easy.length}`),
       el("button", { type: "button", onclick: () => startReview("easy") }, "One by one")),
-    step("New values", others.length, "y", "Label photos and typed values that differ from what the app had.",
+    step("New values", others.length, "y", "Label photos, typed values that differ from what the app had, and products the catalog doesn't have yet.",
       el("button", { type: "button", class: "approve", onclick: () => startReview("others") }, "Start")),
     el("p", { class: "mini" }, `This week: ${doneRows.filter((r) => r.review === "accepted").length} approved, ${doneRows.filter((r) => r.review === "rejected").length} rejected`),
     syncReminder());
