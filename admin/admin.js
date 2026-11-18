@@ -671,36 +671,41 @@ const CAT_FILTERS = [
 ];
 const SRC = { producer: "Producer's site", label: "Pack label", store: "Shop's own brand", shop: "A shop's site" };
 
-/** The catalog file (gzip, from a short-lived link) plus the approved corrections, joined by GTIN. */
+/** A code of the US and Canada (GTIN-13 prefix 001–019, 030–039, 060–139): the US file has only these. */
+const usCode = (k) => { const n = Number(k.slice(1, 4)); return k[0] === "0" && ((n >= 1 && n <= 19) || (n >= 30 && n <= 39) || (n >= 60 && n <= 139)); };
+
+/** The catalog's files, one per country (gzip, from short-lived links), plus the approved corrections, joined by GTIN. */
 async function loadCatalog() {
   if (catLoading) return;
   catLoading = true;
   put($("cat-list"), el("p", { class: "empty" }, "Loading the catalog…"));
   put($("cat-detail"));
   try {
-    const { url, overrides, reports } = await api("catalog");
+    const { url, files, overrides, reports } = await api("catalog");
     catReports = reports ?? {};
-    const file = await fetchJSON(url, "The catalog file");
+    const links = files && Object.keys(files).length ? Object.entries(files) : [["IT", url]];
+    const read = await Promise.all(links.map(async ([c, link]) => [c, await fetchJSON(link, `The ${COUNTRY_NAME[c] ?? c} catalog file`)]));
     // The reports are extras: one that can't be read leaves the catalog as it is.
     await Promise.all(Object.entries(catReports).map(async ([c, links]) => {
       if (links.report) catReport[c] = await fetchJSON(links.report, "The report").catch(() => null);
       if (links.audit) catAudit[c] = await fetchJSON(links.audit, "The audit").catch(() => null);
     }));
     const byKey = new Map();
-    for (const p of file.products ?? []) byKey.set(key14(p.gtin), { ...p, _key: key14(p.gtin) });
+    for (const [, file] of read) for (const p of file.products ?? []) if (!byKey.has(key14(p.gtin))) byKey.set(key14(p.gtin), { ...p, _key: key14(p.gtin) });
     for (const o of overrides ?? []) {
       const k = key14(o.gtin);
       const p = byKey.get(k);
       if (p) p._o = o;
       else if (o.values && o.name && ["kcal", "carbs", "protein", "fat"].every((n) => o.values[n] != null)) {
-        // Not in the bundled file: the app adds it as verified from the correction.
+        // In no bundled file: the app adds it as verified from the correction, to the file of its code's country.
         byKey.set(k, { gtin: k, name: o.name, brand: o.brand, basis: o.unit ?? "g", state: "verified", _added: true, _key: k, _o: o,
+          ...(usCode(k) && read.some(([c]) => c === "US") ? { country: "US" } : {}),
           v: [o.values.kcal, o.values.carbs, o.values.protein, o.values.fat] });
       }
     }
     catalog = [...byKey.values()].sort((a, b) => a.name.localeCompare(b.name, "it"));
     for (const p of catalog) p._hay = [p.name, p.brand, p.maker, p.gtin, ean(p.gtin)].filter(Boolean).join(" ").toLowerCase();
-    catalog.version = file.version;
+    catalog.versions = read.map(([c, file]) => `${COUNTRY_NAME[c] ?? c} ${file.version?.slice(0, 10) ?? "–"}`);
     renderCatalog();
   } catch (err) {
     failed($("cat-list"), err, loadCatalog);
@@ -763,7 +768,7 @@ function renderCatalog() {
     onclick: () => { catShowReport = true; catOpen = true; renderCatalog(); if (!wide.matches) scrollTo({ top: 0 }); } },
   el("span", {}, "Coverage report"), el("span", { class: "badge" }, `${percent(report.scans.in, report.scans.total)}`)) : null,
   catSummary(),
-  el("p", { class: "progress" }, `Catalog of ${catalog.version?.slice(0, 10) ?? "–"}. Read-only: ask Claude for changes.`));
+  el("p", { class: "progress" }, `Catalog: ${catalog.versions?.join(", ") || "–"}. Read-only: ask Claude for changes.`));
   renderCatList();
   renderCatDetail();
 }
